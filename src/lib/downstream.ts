@@ -58,9 +58,6 @@ async function searchWithCache(
     }
 
     const data = await response.json();
-    if (apiSite.key === 'xiaomaomi') {
-      console.log(data);
-    }
     if (
       !data ||
       !data.list ||

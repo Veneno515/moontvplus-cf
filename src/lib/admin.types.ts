@@ -18,7 +18,6 @@ export interface AdminConfig {
     FluidSearch: boolean;
   };
   UserConfig: {
-    AllowRegister: boolean;
     Users: {
       username: string;
       role: 'user' | 'admin' | 'owner';

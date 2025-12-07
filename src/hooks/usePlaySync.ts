@@ -31,7 +31,6 @@ export function usePlaySync({
 }: UsePlaySyncOptions) {
   const router = useRouter();
   const watchRoom = useWatchRoomContextSafe();
-  const syncingRef = useRef(false); // 防止循环同步
   const lastSyncTimeRef = useRef(0); // 上次同步时间
 
   // 检查是否在房间内
@@ -42,7 +41,7 @@ export function usePlaySync({
 
   // 广播播放状态给房间内所有人（任何成员都可以触发同步）
   const broadcastPlayState = useCallback(() => {
-    if (!socket || syncingRef.current || !watchRoom || !isInRoom) return;
+    if (!socket || !watchRoom || !isInRoom) return;
 
     const player = artPlayerRef.current;
     if (!player) return;
@@ -86,11 +85,6 @@ export function usePlaySync({
         return;
       }
 
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping play:update - already syncing');
-        return;
-      }
-
       console.log('[PlaySync] Processing play update - current state:', {
         playerPaused: player.paused,
         statePlaying: state.isPlaying,
@@ -98,28 +92,24 @@ export function usePlaySync({
         stateTime: state.currentTime
       });
 
-      syncingRef.current = true;
+      // 同步播放状态 - 只有状态不一致时才执行操作
+      if (state.isPlaying && player.paused) {
+        console.log('[PlaySync] Player is paused, starting playback');
+        player.play().catch((err: any) => {
+          console.error('[PlaySync] Play error (browser may have blocked autoplay):', err);
+        });
+      } else if (!state.isPlaying && !player.paused) {
+        console.log('[PlaySync] Player is playing, pausing playback');
+        player.pause();
+      } else {
+        console.log('[PlaySync] Player state already matches, no action needed');
+      }
 
-      try {
-        // 同步播放状态
-        if (state.isPlaying && player.paused) {
-          console.log('[PlaySync] Starting playback');
-          player.play().catch((err: any) => console.error('[PlaySync] Play error:', err));
-        } else if (!state.isPlaying && !player.paused) {
-          console.log('[PlaySync] Pausing playback');
-          player.pause();
-        }
-
-        // 同步进度（如果差异超过2秒）
-        const timeDiff = Math.abs(player.currentTime - state.currentTime);
-        if (timeDiff > 2) {
-          console.log('[PlaySync] Seeking to:', state.currentTime, '(diff:', timeDiff, 's)');
-          player.currentTime = state.currentTime;
-        }
-      } finally {
-        setTimeout(() => {
-          syncingRef.current = false;
-        }, 500);
+      // 同步进度（如果差异超过2秒）
+      const timeDiff = Math.abs(player.currentTime - state.currentTime);
+      if (timeDiff > 2) {
+        console.log('[PlaySync] Seeking to:', state.currentTime, '(diff:', timeDiff, 's)');
+        player.currentTime = state.currentTime;
       }
     };
 
@@ -132,17 +122,13 @@ export function usePlaySync({
         return;
       }
 
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping play:play - already syncing');
-        return;
+      // 只有在暂停状态时才执行播放
+      if (player.paused) {
+        console.log('[PlaySync] Executing play command');
+        player.play().catch((err: any) => console.error('[PlaySync] Play error:', err));
+      } else {
+        console.log('[PlaySync] Player already playing, skipping');
       }
-
-      console.log('[PlaySync] Executing play command');
-      syncingRef.current = true;
-      player.play().catch((err: any) => console.error('[PlaySync] Play error:', err));
-      setTimeout(() => {
-        syncingRef.current = false;
-      }, 500);
     };
 
     const handlePauseCommand = () => {
@@ -154,17 +140,13 @@ export function usePlaySync({
         return;
       }
 
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping play:pause - already syncing');
-        return;
+      // 只有在播放状态时才执行暂停
+      if (!player.paused) {
+        console.log('[PlaySync] Executing pause command');
+        player.pause();
+      } else {
+        console.log('[PlaySync] Player already paused, skipping');
       }
-
-      console.log('[PlaySync] Executing pause command');
-      syncingRef.current = true;
-      player.pause();
-      setTimeout(() => {
-        syncingRef.current = false;
-      }, 500);
     };
 
     const handleSeekCommand = (currentTime: number) => {
@@ -176,25 +158,12 @@ export function usePlaySync({
         return;
       }
 
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping play:seek - already syncing');
-        return;
-      }
-
       console.log('[PlaySync] Executing seek command');
-      syncingRef.current = true;
       player.currentTime = currentTime;
-      setTimeout(() => {
-        syncingRef.current = false;
-      }, 500);
     };
 
     const handleChangeCommand = (state: PlayState) => {
       console.log('[PlaySync] Received play:change event:', state);
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping play:change - already syncing');
-        return;
-      }
 
       // 跟随切换视频
       // 构建完整的 URL 参数
@@ -212,15 +181,8 @@ export function usePlaySync({
       const url = `/play?${params.toString()}`;
       console.log('[PlaySync] Redirecting to:', url);
 
-      syncingRef.current = true;
-      try {
-        // 跳转到新的视频页面
-        router.push(url);
-      } finally {
-        setTimeout(() => {
-          syncingRef.current = false;
-        }, 1000);
-      }
+      // 跳转到新的视频页面
+      router.push(url);
     };
 
     socket.on('play:update', handlePlayUpdate);
@@ -262,30 +224,37 @@ export function usePlaySync({
     console.log('[PlaySync] Setting up player event listeners');
 
     const handlePlay = () => {
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping play event - already syncing');
-        return;
+      const player = artPlayerRef.current;
+      if (!player) return;
+
+      // 确认播放器确实在播放状态才广播
+      if (!player.paused) {
+        console.log('[PlaySync] Play event detected, player is playing, broadcasting...');
+        watchRoom.play();
+        broadcastPlayState();
+      } else {
+        console.log('[PlaySync] Play event detected but player is paused, not broadcasting');
       }
-      console.log('[PlaySync] Play event detected, broadcasting...');
-      watchRoom.play();
-      broadcastPlayState();
     };
 
     const handlePause = () => {
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping pause event - already syncing');
-        return;
+      const player = artPlayerRef.current;
+      if (!player) return;
+
+      // 确认播放器确实在暂停状态才广播
+      if (player.paused) {
+        console.log('[PlaySync] Pause event detected, player is paused, broadcasting...');
+        watchRoom.pause();
+        broadcastPlayState();
+      } else {
+        console.log('[PlaySync] Pause event detected but player is playing, not broadcasting');
       }
-      console.log('[PlaySync] Pause event detected, broadcasting...');
-      watchRoom.pause();
-      broadcastPlayState();
     };
 
     const handleSeeked = () => {
-      if (syncingRef.current) {
-        console.log('[PlaySync] Skipping seeked event - already syncing');
-        return;
-      }
+      const player = artPlayerRef.current;
+      if (!player) return;
+
       console.log('[PlaySync] Seeked event detected, broadcasting time:', player.currentTime);
       watchRoom.seekPlayback(player.currentTime);
     };
@@ -296,7 +265,6 @@ export function usePlaySync({
 
     // 定期同步播放进度（每5秒）
     const syncInterval = setInterval(() => {
-      if (syncingRef.current) return;
       if (player.paused) return; // 暂停时不同步
 
       console.log('[PlaySync] Periodic sync - broadcasting state');
@@ -321,8 +289,6 @@ export function usePlaySync({
 
     // 延迟广播，避免初始化时触发
     const timer = setTimeout(() => {
-      if (syncingRef.current) return;
-
       const state: PlayState = {
         type: 'play',
         url: videoUrl,

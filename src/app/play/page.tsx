@@ -2099,6 +2099,7 @@ function PlayPageClient() {
             );
 
             console.log('[弹幕] 使用缓存成功，跳过搜索');
+            lastLoadedEpisodeIdRef.current = episode.episodeId;
             await loadDanmaku(episode.episodeId);
             return; // 成功使用缓存，直接返回
           }
@@ -2211,6 +2212,7 @@ function PlayPageClient() {
             );
 
             // 加载弹幕
+            lastLoadedEpisodeIdRef.current = episode.episodeId;
             await loadDanmaku(episode.episodeId);
 
             console.log('自动搜索弹幕成功:', selection);

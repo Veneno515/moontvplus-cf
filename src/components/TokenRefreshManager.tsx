@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+import { getAuthInfoFromBrowserCookie, clearAuthCookie } from '@/lib/auth';
 
 /**
  * Token 自动刷新管理器
@@ -50,8 +50,18 @@ export function TokenRefreshManager() {
           } else {
             console.error('[Token] Refresh failed:', response.status);
 
-            // 刷新失败，跳转登录
+            // 刷新失败，先登出再跳转登录
             if (response.status === 401 || response.status === 403) {
+              try {
+                await window.fetch('/api/logout', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+              } catch (error) {
+                console.error('[Token] Logout error:', error);
+                // 登出失败时清除前端cookie
+                clearAuthCookie();
+              }
               window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
             }
             return false;
@@ -80,7 +90,17 @@ export function TokenRefreshManager() {
       // Refresh Token 已过期
       if (now >= authInfo.refreshExpires) {
         console.log('[Token] Refresh token expired, redirecting to login');
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        // 先登出再跳转登录
+        window.fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(error => {
+          console.error('[Token] Logout error:', error);
+          // 登出失败时清除前端cookie
+          clearAuthCookie();
+        }).finally(() => {
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        });
         return false;
       }
 
@@ -132,9 +152,19 @@ export function TokenRefreshManager() {
           // 刷新成功，重试原请求（仅此一次）
           response = await originalFetch(input, init);
 
-          // 如果重试后仍然是 401，说明有问题，跳转登录
+          // 如果重试后仍然是 401，说明有问题，先登出再跳转登录
           if (response.status === 401) {
             console.error('[Token] Still 401 after refresh, redirecting to login');
+            try {
+              await originalFetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include',
+              });
+            } catch (error) {
+              console.error('[Token] Logout error:', error);
+              // 登出失败时清除前端cookie
+              clearAuthCookie();
+            }
             window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           }
         }

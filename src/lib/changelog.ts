@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
 	{
+    version: '210.1.3',
+    date: '2026-01-28',
+	added: [
+    ],
+    changed: [
+    ],
+    fixed: [
+		"修复跳转登录不登出"
+	]
+	},{
     version: '210.1.2',
     date: '2026-01-27',
 	added: [

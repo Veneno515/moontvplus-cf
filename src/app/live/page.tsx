@@ -6,8 +6,6 @@ import { Heart, Radio, Tv } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-import { useLiveSync } from '@/hooks/useLiveSync';
-
 import {
   deleteFavorite,
   generateStorageKey,
@@ -17,6 +15,7 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { parseCustomTimeFormat } from '@/lib/time';
+import { useLiveSync } from '@/hooks/useLiveSync';
 
 import EpgScrollableRow from '@/components/EpgScrollableRow';
 import PageLayout from '@/components/PageLayout';
@@ -1150,7 +1149,7 @@ function LivePageClient() {
     if (!selectedGroup) return;
 
     // 先在当前分组搜索
-    let filtered = filterChannels(selectedGroup, keyword);
+    const filtered = filterChannels(selectedGroup, keyword);
 
     // 如果当前分组没有匹配的频道，且有搜索关键词，轮询所有分组
     if (filtered.length === 0 && keyword.trim() && groupedChannels) {

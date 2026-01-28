@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 /* eslint-disable @typescript-eslint/no-var-requires */
 
+// 检测是否为 Cloudflare Pages 构建
+const isCloudflare = process.env.CF_PAGES === '1' || process.env.BUILD_TARGET === 'cloudflare';
+
 const nextConfig = {
-  output: 'standalone',
+  // Cloudflare Pages 不支持 standalone，使用默认输出
+  output: isCloudflare ? undefined : 'standalone',
   eslint: {
     dirs: ['src'],
     // 在生产构建时忽略 ESLint 错误
@@ -13,7 +17,7 @@ const nextConfig = {
   swcMinify: true,
 
   experimental: {
-    instrumentationHook: process.env.NODE_ENV === 'production',
+    instrumentationHook: process.env.NODE_ENV === 'production' && !isCloudflare,
   },
 
   // Uncoment to add domain whitelist

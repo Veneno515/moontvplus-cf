@@ -1,9 +1,10 @@
 'use client';
 
-import { X, Calendar, Star, Clock, Tag, Users, Globe, Film } from 'lucide-react';
+import { Calendar, Clock, Film,Globe, Star, Tag, Users, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+
 import { getTMDBImageUrl } from '@/lib/tmdb.client';
 import { processImageUrl } from '@/lib/utils';
 

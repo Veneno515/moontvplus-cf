@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { getConfig } from '@/lib/config';
 import {
-  searchTMDBMulti,
+  getTMDBImageUrl,
   getTMDBMovieRecommendations,
   getTMDBTVRecommendations,
-  getTMDBImageUrl,
+  searchTMDBMulti,
 } from '@/lib/tmdb.client';
-import { getConfig } from '@/lib/config';
 
 // 服务器端缓存（1天）
 const searchCache = new Map<string, { data: any; timestamp: number }>();

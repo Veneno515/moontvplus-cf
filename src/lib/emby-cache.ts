@@ -72,7 +72,7 @@ export function clearEmbyCache(): { cleared: number } {
 /**
  * 获取缓存的 Emby 媒体库列表
  */
-export function getCachedEmbyViews(embyKey: string = 'default'): any | null {
+export function getCachedEmbyViews(embyKey = 'default'): any | null {
   const cacheKey = `${EMBY_VIEWS_CACHE_KEY}:${embyKey}`;
   const entry = EMBY_CACHE.get(cacheKey);
   if (!entry) return null;
@@ -89,7 +89,7 @@ export function getCachedEmbyViews(embyKey: string = 'default'): any | null {
 /**
  * 设置缓存的 Emby 媒体库列表
  */
-export function setCachedEmbyViews(embyKey: string = 'default', data: any): void {
+export function setCachedEmbyViews(embyKey = 'default', data: any): void {
   const now = Date.now();
   const cacheKey = `${EMBY_VIEWS_CACHE_KEY}:${embyKey}`;
   EMBY_CACHE.set(cacheKey, {

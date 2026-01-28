@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -37,7 +38,6 @@ export async function POST(request: NextRequest) {
     // 追加和覆盖：合并Sources数组
     if (data.Sources && Array.isArray(data.Sources)) {
       const existingSources = adminConfig.EmbyConfig?.Sources || [];
-      const existingKeys = new Set(existingSources.map(s => s.key));
 
       // 覆盖已存在的，追加新的
       const mergedSources = [...existingSources];

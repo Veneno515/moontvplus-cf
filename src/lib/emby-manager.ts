@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { EmbyClient } from './emby.client';
-import { getConfig } from './config';
 import { AdminConfig } from './admin.types';
+import { getConfig } from './config';
+import { EmbyClient } from './emby.client';
 
 interface EmbySourceConfig {
   key: string;

@@ -3,10 +3,11 @@
  * 路径格式: /api/offline-download/local/[source]/[videoId]/[episodeIndex]/[file]
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthInfoFromCookie } from '@/lib/auth';
 import * as fs from 'fs';
+import { NextRequest, NextResponse } from 'next/server';
 import * as path from 'path';
+
+import { getAuthInfoFromCookie } from '@/lib/auth';
 
 // 检查是否启用离线下载功能
 const OFFLINE_DOWNLOAD_ENABLED = process.env.NEXT_PUBLIC_ENABLE_OFFLINE_DOWNLOAD === 'true';

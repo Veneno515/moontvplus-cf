@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+
 import type { AdminConfig } from './admin.types';
 
 export interface EmailOptions {

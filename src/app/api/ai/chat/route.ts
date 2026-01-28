@@ -2,11 +2,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
 import {
   orchestrateDataSources,
   VideoContext,
 } from '@/lib/ai-orchestrator';
+import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -35,7 +35,7 @@ async function streamOpenAIChat(
     temperature: number;
     maxTokens: number;
   },
-  enableStreaming: boolean = true
+  enableStreaming = true
 ): Promise<ReadableStream | Response> {
   const response = await fetch(`${config.baseURL}/chat/completions`, {
     method: 'POST',
@@ -59,45 +59,6 @@ async function streamOpenAIChat(
   }
 
   return enableStreaming ? response.body! : response;
-}
-
-/**
- * Claude API流式聊天请求
- */
-async function streamClaudeChat(
-  messages: ChatMessage[],
-  systemPrompt: string,
-  config: {
-    apiKey: string;
-    model: string;
-    temperature: number;
-    maxTokens: number;
-  }
-): Promise<ReadableStream> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': config.apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: config.maxTokens,
-      temperature: config.temperature,
-      system: systemPrompt,
-      messages: messages,
-      stream: true,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Claude API error: ${response.status} ${response.statusText}`
-    );
-  }
-
-  return response.body!;
 }
 
 /**

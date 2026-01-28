@@ -1,12 +1,15 @@
 // 观影室首页 - 选项卡式界面
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Users, UserPlus, List as ListIcon, Lock, RefreshCw } from 'lucide-react';
+import { List as ListIcon, Lock, RefreshCw,UserPlus, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useWatchRoomContext } from '@/components/WatchRoomProvider';
-import PageLayout from '@/components/PageLayout';
+import { useEffect,useState } from 'react';
+
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+
+import PageLayout from '@/components/PageLayout';
+import { useWatchRoomContext } from '@/components/WatchRoomProvider';
+
 import type { Room } from '@/types/watch-room';
 
 type TabType = 'create' | 'join' | 'list';

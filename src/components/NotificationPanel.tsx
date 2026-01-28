@@ -3,8 +3,8 @@
 'use client';
 
 import { Bell, Check, Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Notification } from '@/lib/types';
 

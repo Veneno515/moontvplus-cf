@@ -24,10 +24,10 @@ import {
 import { processImageUrl } from '@/lib/utils';
 import { useLongPress } from '@/hooks/useLongPress';
 
-import { ImagePlaceholder } from '@/components/ImagePlaceholder';
-import MobileActionSheet from '@/components/MobileActionSheet';
 import AIChatPanel from '@/components/AIChatPanel';
 import DetailPanel from '@/components/DetailPanel';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
+import MobileActionSheet from '@/components/MobileActionSheet';
 
 export interface VideoCardProps {
   id?: string;
@@ -167,6 +167,15 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const actualYear = year;
   const actualQuery = query || '';
   const actualSearchType = type;
+  const isDirectPlaySource = actualSource === 'directplay';
+  const displayYear = useMemo(() => {
+    if (!actualYear) return '';
+    const normalized = actualYear.trim();
+    if (!normalized || normalized === 'unknown') return '';
+    const digits = normalized.replace(/\D/g, '');
+    if (!digits) return normalized;
+    return digits.slice(-2).padStart(2, '0');
+  }, [actualYear]);
 
   // 获取收藏状态（搜索结果页面不检查）
   useEffect(() => {
@@ -711,42 +720,47 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           }}
         >
           {/* 骨架屏 */}
-          {!isLoading && <ImagePlaceholder aspectRatio={orientation === 'horizontal' ? 'aspect-[3/2]' : 'aspect-[2/3]'} />}
-          {/* 图片 */}
-          <Image
-            src={processImageUrl(actualPoster)}
-            alt={actualTitle}
-            fill
-            className={origin === 'live' ? 'object-contain' : orientation === 'horizontal' ? 'object-cover object-center' : 'object-cover'}
-            referrerPolicy='no-referrer'
-            loading='lazy'
-            onLoadingComplete={() => setIsLoading(true)}
-            onError={(e) => {
-              // 图片加载失败时的重试机制
-              const img = e.target as HTMLImageElement;
-              if (!img.dataset.retried) {
-                img.dataset.retried = 'true';
-                setTimeout(() => {
-                  img.src = processImageUrl(actualPoster);
-                }, 2000);
-              }
-            }}
-            style={{
-              // 禁用图片的默认长按效果
-              WebkitUserSelect: 'none',
-              userSelect: 'none',
-              WebkitTouchCallout: 'none',
-              pointerEvents: 'none', // 图片不响应任何指针事件
-            } as React.CSSProperties}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              return false;
-            }}
-            onDragStart={(e) => {
-              e.preventDefault();
-              return false;
-            }}
-          />
+          {!isLoading && !isDirectPlaySource && <ImagePlaceholder aspectRatio={orientation === 'horizontal' ? 'aspect-[3/2]' : 'aspect-[2/3]'} />}
+          {isDirectPlaySource ? (
+            <div className='absolute inset-0 flex items-center justify-center bg-gray-200/80 dark:bg-gray-700/80'>
+              <Link className='w-8 h-8 text-blue-500' />
+            </div>
+          ) : (
+            <Image
+              src={processImageUrl(actualPoster)}
+              alt={actualTitle}
+              fill
+              className={origin === 'live' ? 'object-contain' : orientation === 'horizontal' ? 'object-cover object-center' : 'object-cover'}
+              referrerPolicy='no-referrer'
+              loading='lazy'
+              onLoadingComplete={() => setIsLoading(true)}
+              onError={(e) => {
+                // 图片加载失败时的重试机制
+                const img = e.target as HTMLImageElement;
+                if (!img.dataset.retried) {
+                  img.dataset.retried = 'true';
+                  setTimeout(() => {
+                    img.src = processImageUrl(actualPoster);
+                  }, 2000);
+                }
+              }}
+              style={{
+                // 禁用图片的默认长按效果
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitTouchCallout: 'none',
+                pointerEvents: 'none', // 图片不响应任何指针事件
+              } as React.CSSProperties}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                return false;
+              }}
+              onDragStart={(e) => {
+                e.preventDefault();
+                return false;
+              }}
+            />
+          )}
 
           {/* 悬浮遮罩 */}
           <div
@@ -944,7 +958,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               </div>
 
               {/* 年份显示 */}
-              {actualYear && actualYear !== 'unknown' && actualYear.trim() !== '' && (
+              {displayYear && (
                 <div
                   className='bg-black/60 text-white text-[9px] sm:text-xs font-medium px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-md transition-all duration-300 ease-out group-hover:scale-110 backdrop-blur-sm flex items-center justify-center'
                   style={{
@@ -957,7 +971,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                     return false;
                   }}
                 >
-                  {actualYear.slice(-2)}年
+                  {displayYear}年
                 </div>
               )}
             </div>

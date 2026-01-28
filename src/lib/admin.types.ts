@@ -29,6 +29,7 @@ export interface AdminConfig {
     PansouApiUrl?: string;
     PansouUsername?: string;
     PansouPassword?: string;
+    PansouKeywordBlocklist?: string;
     // 评论功能开关
     EnableComments: boolean;
     // 自定义去广告代码
@@ -95,6 +96,15 @@ export interface AdminConfig {
     channelNumber?: number;
     disabled?: boolean;
   }[];
+  WebLiveConfig?: {
+    key: string;
+    name: string;
+    platform: string; // 直播平台类型，如 'huya'
+    roomId: string; // 房间ID
+    from: 'config' | 'custom';
+    disabled?: boolean;
+  }[];
+  WebLiveEnabled?: boolean; // 网络直播功能总开关
   ThemeConfig?: {
     enableBuiltInTheme: boolean; // 是否启用内置主题
     builtInTheme: string; // 内置主题名称

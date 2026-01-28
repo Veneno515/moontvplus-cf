@@ -139,7 +139,7 @@ export class AESDecryptor {
     const invSubMix2 = invSubMix[2];
     const invSubMix3 = invSubMix[3];
 
-    let prev: number = 0;
+    let prev = 0;
     let t: number;
 
     for (ksRow = 0; ksRow < ksRows; ksRow++) {

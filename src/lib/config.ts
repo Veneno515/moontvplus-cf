@@ -251,6 +251,11 @@ async function getInitConfig(configFile: string, subConfig: {
       TMDBApiKey: process.env.TMDB_API_KEY || '',
       TMDBProxy: process.env.TMDB_PROXY || '',
       TMDBReverseProxy: process.env.TMDB_REVERSE_PROXY || '',
+      // Pansou配置
+      PansouApiUrl: '',
+      PansouUsername: '',
+      PansouPassword: '',
+      PansouKeywordBlocklist: '',
       // 评论功能开关
       EnableComments: false,
     },
@@ -262,32 +267,9 @@ async function getInitConfig(configFile: string, subConfig: {
     LiveConfig: [],
   };
 
-  // 补充用户信息
-  let userNames: string[] = [];
-  try {
-    userNames = await db.getAllUsers();
-  } catch (e) {
-    console.error('获取用户列表失败:', e);
-  }
-
-  // localStorage 模式下，只使用环境变量中的站长账号
-  const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
-  if (storageType === 'localstorage') {
-    userNames = [];
-  }
-
-  const ownerUsername = process.env.USERNAME || 'default';
-  const allUsers = userNames.filter((u) => u !== ownerUsername).map((u) => ({
-    username: u,
-    role: 'user',
-    banned: false,
-  }));
-  allUsers.unshift({
-    username: ownerUsername,
-    role: 'owner',
-    banned: false,
-  });
-  adminConfig.UserConfig.Users = allUsers as any;
+  // 用户信息已迁移到新版数据库，不再填充 UserConfig.Users
+  // 保持为空数组，避免与新版用户系统冲突
+  adminConfig.UserConfig.Users = [];
 
   // 从配置文件中补充源信息
   Object.entries(cfgFile.api_site || []).forEach(([key, site]) => {
@@ -446,6 +428,10 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
       FluidSearch: true,
       DanmakuApiBase: 'http://localhost:9321',
       DanmakuApiToken: '87654321',
+      PansouApiUrl: '',
+      PansouUsername: '',
+      PansouPassword: '',
+      PansouKeywordBlocklist: '',
       EnableComments: false,
     };
   }
@@ -459,6 +445,9 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
   // 确保评论开关存在
   if (adminConfig.SiteConfig.EnableComments === undefined) {
     adminConfig.SiteConfig.EnableComments = false;
+  }
+  if (adminConfig.SiteConfig.PansouKeywordBlocklist === undefined) {
+    adminConfig.SiteConfig.PansouKeywordBlocklist = '';
   }
   if (!adminConfig.UserConfig) {
     adminConfig.UserConfig = { Users: [] };
@@ -476,35 +465,14 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
     adminConfig.LiveConfig = [];
   }
 
-  // 站长变更自检
+  // 用户信息已迁移到新版数据库
+  // 这里只保留站长用户用于兼容性，其他用户从数据库读取
   const ownerUser = process.env.USERNAME;
-
-  // 去重
-  const seenUsernames = new Set<string>();
-  adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter((user) => {
-    if (seenUsernames.has(user.username)) {
-      return false;
-    }
-    seenUsernames.add(user.username);
-    return true;
-  });
-  // 过滤站长
-  const originOwnerCfg = adminConfig.UserConfig.Users.find((u) => u.username === ownerUser);
-  adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter((user) => user.username !== ownerUser);
-  // 其他用户不得拥有 owner 权限
-  adminConfig.UserConfig.Users.forEach((user) => {
-    if (user.role === 'owner') {
-      user.role = 'user';
-    }
-  });
-  // 重新添加回站长
-  adminConfig.UserConfig.Users.unshift({
+  adminConfig.UserConfig.Users = [{
     username: ownerUser!,
     role: 'owner',
     banned: false,
-    enabledApis: originOwnerCfg?.enabledApis || undefined,
-    tags: originOwnerCfg?.tags || undefined,
-  });
+  }];
 
   // 采集源去重
   const seenSourceKeys = new Set<string>();

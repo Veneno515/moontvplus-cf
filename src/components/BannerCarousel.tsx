@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { getTMDBImageUrl, getGenreNames, type TMDBItem } from '@/lib/tmdb.client';
+import { useCallback, useEffect, useRef,useState } from 'react';
+
+import { type TMDBItem,getGenreNames, getTMDBImageUrl } from '@/lib/tmdb.client';
 import { processImageUrl } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
 interface BannerCarouselProps {
   autoPlayInterval?: number; // 自动播放间隔（毫秒）

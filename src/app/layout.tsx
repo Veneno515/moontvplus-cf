@@ -7,16 +7,17 @@ import './globals.css';
 
 import { getConfig } from '@/lib/config';
 
+import { DanmakuCacheCleanup } from '../components/DanmakuCacheCleanup';
+import { DownloadBubble } from '../components/DownloadBubble';
+import { DownloadPanel } from '../components/DownloadPanel';
 import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
-import { WatchRoomProvider } from '../components/WatchRoomProvider';
-import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
-import { DownloadProvider } from '../contexts/DownloadContext';
-import { DownloadBubble } from '../components/DownloadBubble';
-import { DownloadPanel } from '../components/DownloadPanel';
-import { DanmakuCacheCleanup } from '../components/DanmakuCacheCleanup';
+import { TokenRefreshManager } from '../components/TokenRefreshManager';
 import TopProgressBar from '../components/TopProgressBar';
+import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
+import { WatchRoomProvider } from '../components/WatchRoomProvider';
+import { DownloadProvider } from '../contexts/DownloadContext';
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,8 @@ export default async function RootLayout({
   let aiDefaultMessageNoVideo = '';
   let aiDefaultMessageWithVideo = '';
   let enableMovieRequest = true;
+  let webLiveEnabled = false;
+  let customAdFilterVersion = 0;
   let customCategories = [] as {
     name: string;
     type: 'movie' | 'tv';
@@ -127,6 +130,10 @@ export default async function RootLayout({
     aiDefaultMessageWithVideo = config.AIConfig?.DefaultMessageWithVideo || '';
     // 求片功能配置
     enableMovieRequest = config.SiteConfig.EnableMovieRequest ?? true;
+    // 网络直播功能配置
+    webLiveEnabled = config.WebLiveEnabled ?? false;
+    // 自定义去广告代码版本号
+    customAdFilterVersion = config.SiteConfig?.CustomAdFilterVersion || 0;
     // 检查是否启用了 OpenList 功能
     openListEnabled = !!(
       config.OpenListConfig?.Enabled &&
@@ -182,6 +189,10 @@ export default async function RootLayout({
     AI_DEFAULT_MESSAGE_NO_VIDEO: aiDefaultMessageNoVideo,
     AI_DEFAULT_MESSAGE_WITH_VIDEO: aiDefaultMessageWithVideo,
     ENABLE_MOVIE_REQUEST: enableMovieRequest,
+    WEB_LIVE_ENABLED: webLiveEnabled,
+    CUSTOM_AD_FILTER_VERSION: customAdFilterVersion,
+    FESTIVE_EFFECT_ENABLED:
+      process.env.FESTIVE_EFFECT_ENABLED === 'true',
   };
 
   return (
@@ -212,6 +223,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <TopProgressBar />
+          <TokenRefreshManager />
           <SiteProvider siteName={siteName} announcement={announcement} tmdbApiKey={tmdbApiKey}>
             <WatchRoomProvider>
               <DownloadProvider>

@@ -1,36 +1,85 @@
 import { NextRequest } from 'next/server';
 
-// 从cookie获取认证信息 (服务端使用)
-export function getAuthInfoFromCookie(request: NextRequest): {
+export type AuthInfo = {
   password?: string;
   username?: string;
   signature?: string;
   timestamp?: number;
   role?: 'owner' | 'admin' | 'user';
-} | null {
+  tokenId?: string;
+  refreshToken?: string;
+  refreshExpires?: number;
+};
+
+function getAuthTokenFromHeader(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const bearerMatch = trimmed.match(/^Bearer\s+(.+)$/i);
+  if (bearerMatch) {
+    return bearerMatch[1].trim();
+  }
+
+  const tokenMatch = trimmed.match(/^Token\s+(.+)$/i);
+  if (tokenMatch) {
+    return tokenMatch[1].trim();
+  }
+
+  return trimmed;
+}
+
+export function parseAuthInfo(value?: string | null): AuthInfo | null {
+  if (!value) {
+    return null;
+  }
+
+  let decoded = value;
+
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch (error) {
+    decoded = value;
+  }
+
+  if (decoded.includes('%')) {
+    try {
+      decoded = decodeURIComponent(decoded);
+    } catch (error) {
+      decoded = value;
+    }
+  }
+
+  try {
+    return JSON.parse(decoded) as AuthInfo;
+  } catch (error) {
+    return null;
+  }
+}
+
+// 从cookie获取认证信息 (服务端使用)
+export function getAuthInfoFromCookie(request: NextRequest): AuthInfo | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader) {
+    const headerValue = getAuthTokenFromHeader(authHeader);
+    const headerAuthInfo = parseAuthInfo(headerValue);
+    if (headerAuthInfo) {
+      return headerAuthInfo;
+    }
+  }
+
   const authCookie = request.cookies.get('auth');
 
   if (!authCookie) {
     return null;
   }
 
-  try {
-    const decoded = decodeURIComponent(authCookie.value);
-    const authData = JSON.parse(decoded);
-    return authData;
-  } catch (error) {
-    return null;
-  }
+  return parseAuthInfo(authCookie.value);
 }
 
 // 从cookie获取认证信息 (客户端使用)
-export function getAuthInfoFromBrowserCookie(): {
-  password?: string;
-  username?: string;
-  signature?: string;
-  timestamp?: number;
-  role?: 'owner' | 'admin' | 'user';
-} | null {
+export function getAuthInfoFromBrowserCookie(): AuthInfo | null {
   if (typeof window === 'undefined') {
     return null;
   }
@@ -57,16 +106,7 @@ export function getAuthInfoFromBrowserCookie(): {
       return null;
     }
 
-    // 处理可能的双重编码
-    let decoded = decodeURIComponent(authCookie);
-
-    // 如果解码后仍然包含 %，说明是双重编码，需要再次解码
-    if (decoded.includes('%')) {
-      decoded = decodeURIComponent(decoded);
-    }
-
-    const authData = JSON.parse(decoded);
-    return authData;
+    return parseAuthInfo(authCookie);
   } catch (error) {
     return null;
   }

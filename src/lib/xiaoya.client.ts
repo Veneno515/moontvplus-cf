@@ -16,7 +16,7 @@ export interface XiaoyaListResponse {
 }
 
 export class XiaoyaClient {
-  private token: string = '';
+  private token = '';
 
   constructor(
     private baseURL: string,

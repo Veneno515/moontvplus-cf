@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { usePathname, useRouter,useSearchParams } from 'next/navigation';
 import NProgress from 'nprogress';
+import { useEffect, useRef } from 'react';
 
 // 创建全局钩子来拦截 router
 let globalRouterRef: any = null;

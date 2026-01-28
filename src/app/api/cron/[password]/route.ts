@@ -4,12 +4,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig, refineConfig } from '@/lib/config';
 import { db, getStorage } from '@/lib/db';
+import { EmailService } from '@/lib/email.service';
+import { FavoriteUpdate,getBatchFavoriteUpdateEmailTemplate } from '@/lib/email.templates';
 import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
 import { refreshLiveChannels } from '@/lib/live';
 import { startOpenListRefresh } from '@/lib/openlist-refresh';
 import { SearchResult } from '@/lib/types';
-import { EmailService } from '@/lib/email.service';
-import { getBatchFavoriteUpdateEmailTemplate, FavoriteUpdate } from '@/lib/email.templates';
 
 export const runtime = 'nodejs';
 

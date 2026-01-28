@@ -1,10 +1,13 @@
 // WatchRoom 全局状态管理 Provider
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useCallback,useContext, useEffect, useState } from 'react';
+
 import { useWatchRoom } from '@/hooks/useWatchRoom';
-import type { Room, Member, ChatMessage, WatchRoomConfig } from '@/types/watch-room';
+
 import Toast, { ToastProps } from '@/components/Toast';
+
+import type { ChatMessage, Member, Room, WatchRoomConfig } from '@/types/watch-room';
 
 // Import type from watch-room-socket
 type WatchRoomSocket = import('@/lib/watch-room-socket').WatchRoomSocket;

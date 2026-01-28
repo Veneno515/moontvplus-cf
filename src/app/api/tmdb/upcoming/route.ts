@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTMDBUpcomingContent } from '@/lib/tmdb.client';
+
 import { getConfig } from '@/lib/config';
+import { getTMDBUpcomingContent } from '@/lib/tmdb.client';
 
 // 内存缓存对象
 interface CacheItem {

@@ -1,9 +1,11 @@
 // React Hook for Play Page Synchronization
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback,useEffect, useRef } from 'react';
+
 import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
+
 import type { PlayState } from '@/types/watch-room';
 
 interface UsePlaySyncOptions {

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, FolderOpen, Home, Radio, Star, Tv, Users } from 'lucide-react';
+import { Cat, Clover, Film, FolderOpen, Globe, Home, Star, Tv, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -51,9 +51,14 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       href: '/douban?type=show',
     },
     {
-      icon: Radio,
-      label: '直播',
+      icon: Tv,
+      label: '电视直播',
       href: '/live',
+    },
+    {
+      icon: Globe,
+      label: '网络直播',
+      href: '/web-live',
     },
   ]);
 
@@ -61,7 +66,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     const runtimeConfig = (window as any).RUNTIME_CONFIG;
 
     // 基础导航项（不包括观影室）
-    let items = [
+    const items = [
       { icon: Home, label: '首页', href: '/' },
       {
         icon: Film,
@@ -84,11 +89,20 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
         href: '/douban?type=show',
       },
       {
-        icon: Radio,
-        label: '直播',
+        icon: Tv,
+        label: '电视直播',
         href: '/live',
       },
     ];
+
+    // 如果启用网络直播，添加网络直播入口
+    if (runtimeConfig?.WEB_LIVE_ENABLED) {
+      items.push({
+        icon: Globe,
+        label: '网络直播',
+        href: '/web-live',
+      });
+    }
 
     // 如果配置了 OpenList 或 Emby，添加私人影库入口
     if (runtimeConfig?.PRIVATE_LIBRARY_ENABLED) {

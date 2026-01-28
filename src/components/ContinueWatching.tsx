@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 'use client';
 
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle } from 'lucide-react';
 
 import type { PlayRecord } from '@/lib/db.client';
 import {

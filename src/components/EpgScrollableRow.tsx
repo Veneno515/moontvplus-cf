@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 
-import { Clock, Target, Tv, List, BarChart3 } from 'lucide-react';
+import { BarChart3,Clock, List, Target, Tv } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { formatTimeToHHMM, parseCustomTimeFormat } from '@/lib/time';

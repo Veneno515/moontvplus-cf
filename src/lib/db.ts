@@ -3,7 +3,7 @@
 import { AdminConfig } from './admin.types';
 import { KvrocksStorage } from './kvrocks.db';
 import { RedisStorage } from './redis.db';
-import { Favorite, IStorage, PlayRecord, SkipConfig, DanmakuFilterConfig } from './types';
+import { DanmakuFilterConfig,Favorite, IStorage, PlayRecord, SkipConfig } from './types';
 import { UpstashRedisStorage } from './upstash.db';
 
 // storage type 常量: 'localstorage' | 'redis' | 'upstash'，默认 'localstorage'
@@ -224,8 +224,8 @@ export class DbManager {
   }
 
   async getUserListV2(
-    offset: number = 0,
-    limit: number = 20,
+    offset = 0,
+    limit = 20,
     ownerUsername?: string
   ): Promise<{
     users: Array<{

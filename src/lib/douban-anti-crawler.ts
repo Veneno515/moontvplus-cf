@@ -2,6 +2,39 @@ import * as cheerio from 'cheerio';
 import { createHash } from 'crypto';
 
 /**
+ * Cookie 缓存
+ */
+interface CookieCache {
+  cookie: string;
+  expiresAt: number;
+}
+
+let cookieCache: CookieCache | null = null;
+
+/**
+ * 从 Set-Cookie header 中提取 cookie 值
+ */
+function extractCookieValue(setCookieHeader: string): string {
+  // 提取 dbsawcv1 的值
+  const match = setCookieHeader.match(/dbsawcv1=([^;]+)/);
+  if (match) {
+    return `dbsawcv1=${match[1]}`;
+  }
+  return setCookieHeader.split(';')[0];
+}
+
+/**
+ * 检查缓存的 cookie 是否有效
+ */
+function isCookieCacheValid(): boolean {
+  if (!cookieCache) {
+    return false;
+  }
+  // 提前 20 秒过期，确保不会在使用时过期
+  return Date.now() < cookieCache.expiresAt - 20000;
+}
+
+/**
  * 计算 SHA-512 哈希值
  */
 function sha512(data: string): string {
@@ -52,9 +85,16 @@ function parseVerificationPage(html: string): {
 /**
  * 获取豆瓣访问 cookie（处理反爬验证）
  * @param url 要访问的豆瓣 URL
+ * @param forceRefresh 是否强制刷新 cookie
  * @returns cookie 字符串
  */
-export async function getDoubanCookie(url: string): Promise<string> {
+export async function getDoubanCookie(url: string, forceRefresh = false): Promise<string> {
+  // 检查缓存
+  if (!forceRefresh && isCookieCacheValid()) {
+    console.log('Using cached douban cookie');
+    return cookieCache!.cookie;
+  }
+
   const headers = {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -134,7 +174,15 @@ export async function getDoubanCookie(url: string): Promise<string> {
       }
 
       console.log('Successfully obtained douban cookie');
-      return setCookieHeader;
+
+      // 提取 cookie 值并缓存（有效期 300 秒 = 5 分钟）
+      const cookieValue = extractCookieValue(setCookieHeader);
+      cookieCache = {
+        cookie: cookieValue,
+        expiresAt: Date.now() + 300000, // 5 分钟后过期
+      };
+
+      return cookieValue;
     }
 
     throw new Error(`Unexpected response status: ${firstResponse.status}`);
@@ -164,7 +212,29 @@ export async function fetchDoubanWithVerification(
   };
 
   try {
-    // 先尝试直接访问
+    // 如果有缓存的 cookie，先尝试使用
+    if (isCookieCacheValid()) {
+      console.log('Trying with cached cookie...');
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          Cookie: cookieCache!.cookie,
+        },
+      });
+
+      // 如果成功，直接返回
+      if (response.ok) {
+        console.log('Request succeeded with cached cookie');
+        return response;
+      }
+
+      // 如果失败，清除缓存并继续
+      console.log('Cached cookie failed, will obtain new one');
+      cookieCache = null;
+    }
+
+    // 尝试直接访问（不带 cookie）
     let response = await fetch(url, {
       ...options,
       headers,
@@ -177,7 +247,7 @@ export async function fetchDoubanWithVerification(
       if (location && location.includes('sec.douban.com')) {
         console.log('Anti-crawler detected, obtaining cookie...');
 
-        // 获取验证 cookie
+        // 获取验证 cookie（会自动缓存）
         const cookie = await getDoubanCookie(url);
 
         // 使用 cookie 重新请求

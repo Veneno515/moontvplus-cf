@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import {
+  generateRefreshToken,
+  generateTokenId,
+  storeRefreshToken,
+  TOKEN_CONFIG,
+} from '@/lib/refresh-token';
 
 export const runtime = 'nodejs';
 
@@ -30,18 +36,66 @@ async function generateSignature(
     .join('');
 }
 
+// 获取设备信息
+function getDeviceInfo(userAgent: string): string {
+  const ua = userAgent.toLowerCase();
+
+  if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+    if (ua.includes('android')) return 'Android Mobile';
+    if (ua.includes('iphone')) return 'iPhone';
+    return 'Mobile Device';
+  }
+
+  if (ua.includes('tablet') || ua.includes('ipad')) {
+    return 'Tablet';
+  }
+
+  if (ua.includes('windows')) return 'Windows PC';
+  if (ua.includes('mac')) return 'Mac';
+  if (ua.includes('linux')) return 'Linux';
+
+  return 'Unknown Device';
+}
+
 // 生成认证Cookie
 async function generateAuthCookie(
   username: string,
-  role: 'owner' | 'admin' | 'user'
+  role: 'owner' | 'admin' | 'user',
+  deviceInfo: string
 ): Promise<string> {
   const authData: any = { role };
 
   if (username && process.env.PASSWORD) {
     authData.username = username;
-    const signature = await generateSignature(username, process.env.PASSWORD);
-    authData.signature = signature;
     authData.timestamp = Date.now();
+
+    // 生成签名（包含 username, role, timestamp）
+    const dataToSign = JSON.stringify({
+      username: authData.username,
+      role: authData.role,
+      timestamp: authData.timestamp
+    });
+    const signature = await generateSignature(dataToSign, process.env.PASSWORD);
+    authData.signature = signature;
+
+    // 生成双 Token
+    const tokenId = generateTokenId();
+    const refreshToken = generateRefreshToken();
+    const now = Date.now();
+    const refreshExpires = now + TOKEN_CONFIG.REFRESH_TOKEN_AGE;
+
+    authData.tokenId = tokenId;
+    authData.refreshToken = refreshToken;
+    authData.refreshExpires = refreshExpires;
+
+    // 存储 Refresh Token
+    await storeRefreshToken(username, tokenId, {
+      token: refreshToken,
+      deviceInfo,
+      createdAt: now,
+      expiresAt: refreshExpires,
+      lastUsed: now,
+    });
   }
 
   return encodeURIComponent(JSON.stringify(authData));
@@ -122,8 +176,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 检查用户名是否已存在（优先使用新版本）
-    let userExists = await db.checkUserExistV2(username);
+    // 检查用户名是否已存在
+    const userExists = await db.checkUserExistV2(username);
     if (userExists) {
       return NextResponse.json(
         { error: '用户名已存在' },
@@ -131,24 +185,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 检查配置中是否已存在
-    const existingUser = config.UserConfig.Users.find((u) => u.username === username);
-    if (existingUser) {
-      return NextResponse.json(
-        { error: '用户名已存在' },
-        { status: 409 }
-      );
-    }
-
-    // 检查OIDC sub是否已被使用（优先使用新版本）
-    let existingOIDCUsername = await db.getUserByOidcSub(oidcSession.sub);
-    if (!existingOIDCUsername) {
-      // 回退到配置中查找
-      const existingOIDCUser = config.UserConfig.Users.find((u: any) => u.oidcSub === oidcSession.sub);
-      if (existingOIDCUser) {
-        existingOIDCUsername = existingOIDCUser.username;
-      }
-    }
+    // 检查OIDC sub是否已被使用
+    const existingOIDCUsername = await db.getUserByOidcSub(oidcSession.sub);
     if (existingOIDCUsername) {
       return NextResponse.json(
         { error: '该OIDC账号已被注册' },
@@ -171,9 +209,10 @@ export async function POST(request: NextRequest) {
 
       // 设置认证cookie
       const response = NextResponse.json({ ok: true, message: '注册成功' });
-      const cookieValue = await generateAuthCookie(username, 'user');
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 7);
+      const userAgent = request.headers.get('user-agent') || 'Unknown';
+      const deviceInfo = getDeviceInfo(userAgent);
+      const cookieValue = await generateAuthCookie(username, 'user', deviceInfo);
+      const expires = new Date(Date.now() + TOKEN_CONFIG.REFRESH_TOKEN_AGE);
 
       response.cookies.set('auth', cookieValue, {
         path: '/',

@@ -4,11 +4,11 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
-import * as https from 'https';
 import * as http from 'http';
-import * as zlib from 'zlib';
+import * as https from 'https';
+import * as path from 'path';
 import { URL } from 'url';
+import * as zlib from 'zlib';
 
 export interface OfflineDownloadTask {
   id: string;
@@ -467,12 +467,16 @@ export class OfflineDownloader {
         });
 
         fileStream.on('error', (err) => {
-          fs.unlink(savePath, () => {});
+          fs.unlink(savePath, () => {
+            // Ignore unlink errors
+          });
           reject(err);
         });
 
         stream.on('error', (err) => {
-          fs.unlink(savePath, () => {});
+          fs.unlink(savePath, () => {
+            // Ignore unlink errors
+          });
           reject(err);
         });
       });

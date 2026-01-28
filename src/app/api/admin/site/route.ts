@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       PansouApiUrl,
       PansouUsername,
       PansouPassword,
+      PansouKeywordBlocklist,
       EnableComments,
       CustomAdFilterCode,
       CustomAdFilterVersion,
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
       PansouApiUrl?: string;
       PansouUsername?: string;
       PansouPassword?: string;
+      PansouKeywordBlocklist?: string;
       EnableComments: boolean;
       CustomAdFilterCode?: string;
       CustomAdFilterVersion?: number;
@@ -129,6 +131,7 @@ export async function POST(request: NextRequest) {
       (TMDBReverseProxy !== undefined && typeof TMDBReverseProxy !== 'string') ||
       (BannerDataSource !== undefined && typeof BannerDataSource !== 'string') ||
       (RecommendationDataSource !== undefined && typeof RecommendationDataSource !== 'string') ||
+      (PansouKeywordBlocklist !== undefined && typeof PansouKeywordBlocklist !== 'string') ||
       typeof EnableComments !== 'boolean' ||
       (CustomAdFilterCode !== undefined && typeof CustomAdFilterCode !== 'string') ||
       (CustomAdFilterVersion !== undefined && typeof CustomAdFilterVersion !== 'number') ||
@@ -184,6 +187,7 @@ export async function POST(request: NextRequest) {
       PansouApiUrl,
       PansouUsername,
       PansouPassword,
+      PansouKeywordBlocklist,
       EnableComments,
       CustomAdFilterCode,
       CustomAdFilterVersion,

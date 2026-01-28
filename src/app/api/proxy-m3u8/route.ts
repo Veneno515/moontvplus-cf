@@ -107,37 +107,51 @@ export async function GET(request: Request) {
 function filterAdsFromM3U8Default(type: string, m3u8Content: string): string {
   if (!m3u8Content) return '';
 
+  // 广告关键字列表
+  const adKeywords = [
+    'sponsor',
+    '/ad/',
+    '/ads/',
+    'advert',
+    'advertisement',
+    '/adjump',
+    'redtraffic'
+  ];
+
   // 按行分割M3U8内容
   const lines = m3u8Content.split('\n');
   const filteredLines = [];
 
-  let nextdelete = false;
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
 
-    if (nextdelete) {
-      nextdelete = false;
+    // 跳过 #EXT-X-DISCONTINUITY 标识
+    if (line.includes('#EXT-X-DISCONTINUITY')) {
+      i++;
       continue;
     }
 
-    // 只过滤#EXT-X-DISCONTINUITY标识
-    if (!line.includes('#EXT-X-DISCONTINUITY')) {
-      if (
-        type === 'ruyi' &&
-        (line.includes('EXTINF:5.640000') ||
-          line.includes('EXTINF:2.960000') ||
-          line.includes('EXTINF:3.480000') ||
-          line.includes('EXTINF:4.000000') ||
-          line.includes('EXTINF:0.960000') ||
-          line.includes('EXTINF:10.000000') ||
-          line.includes('EXTINF:1.266667'))
-      ) {
-        nextdelete = true;
-        continue;
-      }
+    // 如果是 EXTINF 行，检查下一行 URL 是否包含广告关键字
+    if (line.includes('#EXTINF:')) {
+      // 检查下一行 URL 是否包含广告关键字
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1];
+        const containsAdKeyword = adKeywords.some(keyword =>
+          nextLine.toLowerCase().includes(keyword.toLowerCase())
+        );
 
-      filteredLines.push(line);
+        if (containsAdKeyword) {
+          // 跳过 EXTINF 行和 URL 行
+          i += 2;
+          continue;
+        }
+      }
     }
+
+    // 保留当前行
+    filteredLines.push(line);
+    i++;
   }
 
   return filteredLines.join('\n');

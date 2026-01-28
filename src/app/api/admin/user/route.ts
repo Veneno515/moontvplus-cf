@@ -454,21 +454,9 @@ export async function POST(request: NextRequest) {
         // 权限检查：站长可批量配置所有人的用户组，管理员只能批量配置普通用户
         if (operatorRole !== 'owner') {
           for (const targetUsername of usernames) {
-            // 先从配置中查找
-            let targetUser = adminConfig.UserConfig.Users.find(u => u.username === targetUsername);
-            // 如果配置中没有，从V2存储中查找
-            if (!targetUser) {
-              const userV2 = await db.getUserInfoV2(targetUsername);
-              if (userV2) {
-                targetUser = {
-                  username: targetUsername,
-                  role: userV2.role,
-                  banned: userV2.banned,
-                  tags: userV2.tags,
-                };
-              }
-            }
-            if (targetUser && targetUser.role === 'admin' && targetUsername !== username) {
+            // 从V2存储中查找用户
+            const userV2 = await db.getUserInfoV2(targetUsername);
+            if (userV2 && userV2.role === 'admin' && targetUsername !== username) {
               return NextResponse.json({ error: `管理员无法操作其他管理员 ${targetUsername}` }, { status: 400 });
             }
           }

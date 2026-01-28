@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+
 import { getThemeCSS } from '@/styles/themes';
 
 export const runtime = 'nodejs';

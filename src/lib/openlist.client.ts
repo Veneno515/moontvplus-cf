@@ -33,7 +33,7 @@ export interface OpenListGetResponse {
 }
 
 export class OpenListClient {
-  private token: string = '';
+  private token = '';
 
   constructor(
     private baseURL: string,

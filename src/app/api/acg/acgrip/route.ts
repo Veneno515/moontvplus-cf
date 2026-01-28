@@ -7,8 +7,8 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 export const runtime = 'nodejs';
 
 /**
- * POST /api/acg/search
- * 搜索 ACG 磁力资源（仅管理员和站长可用）
+ * POST /api/acg/acgrip
+ * 搜索 ACG.RIP 磁力资源（仅管理员和站长可用，支持分页）
  */
 export async function POST(req: NextRequest) {
   try {
@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 请求 acg.rip API
-    const acgUrl = `https://acg.rip/page/${pageNum}.xml?term=${encodeURIComponent(trimmedKeyword)}`;
+    // 请求 acg.rip RSS
+    const searchUrl = `https://acg.rip/page/${pageNum}.xml?term=${encodeURIComponent(trimmedKeyword)}`;
 
-    const response = await fetch(acgUrl, {
+    const response = await fetch(searchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       },
@@ -78,10 +78,12 @@ export async function POST(req: NextRequest) {
 
     // 转换为标准格式
     const results = items.map((item: any) => {
+      const description = item.description?.[0] || '';
+
       // 提取描述中的图片（如果有）
       let images: string[] = [];
-      if (item.description?.[0]) {
-        const imgMatches = item.description[0].match(/src="([^"]+)"/g);
+      if (description) {
+        const imgMatches = description.match(/src="([^"]+)"/g);
         if (imgMatches) {
           images = imgMatches.map((match: string) => {
             const urlMatch = match.match(/src="([^"]+)"/);
@@ -90,13 +92,19 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      const title = item.title?.[0] || '';
+      const link = item.link?.[0] || '';
+      const guid = item.guid?.[0] || link || `${title}-${item.pubDate?.[0] || ''}`;
+      const pubDate = item.pubDate?.[0] || '';
+      const torrentUrl = item.enclosure?.[0]?.$?.url || '';
+
       return {
-        title: item.title?.[0] || '',
-        link: item.link?.[0] || '',
-        guid: item.guid?.[0] || '',
-        pubDate: item.pubDate?.[0] || '',
-        torrentUrl: item.enclosure?.[0]?.$?.url || '',
-        description: item.description?.[0] || '',
+        title,
+        link,
+        guid,
+        pubDate,
+        torrentUrl,
+        description,
         images,
       };
     });
@@ -107,12 +115,12 @@ export async function POST(req: NextRequest) {
       total: results.length,
       items: results,
     });
-
   } catch (error: any) {
-    console.error('ACG 搜索失败:', error);
+    console.error('ACG.RIP 搜索失败:', error);
     return NextResponse.json(
       { error: error.message || '搜索失败' },
       { status: 500 }
     );
   }
 }
+

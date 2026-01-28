@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
     response.cookies.set('oidc_state', state, {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 600, // 10分钟
     });

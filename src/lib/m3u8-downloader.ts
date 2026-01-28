@@ -3,9 +3,10 @@
  * 基于 M3U8Download 项目改造为 TypeScript 版本
  */
 
-import { AESDecryptor } from './aes-decryptor';
 // @ts-ignore - mux.js 没有类型定义
 import * as muxjs from 'mux.js';
+
+import { AESDecryptor } from './aes-decryptor';
 
 export interface M3U8DownloadTask {
   id: string;

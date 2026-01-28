@@ -19,18 +19,21 @@ import {
   LogOut,
   Mail,
   MessageSquare,
+  Monitor,
   MoveDown,
   MoveUp,
   Rss,
   Settings,
   Shield,
   Sliders,
+  Smartphone,
   Star,
+  Tablet,
   User,
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
@@ -38,11 +41,11 @@ import { clearAllDanmakuCache } from '@/lib/danmaku/api';
 import { CURRENT_VERSION } from '@/lib/version';
 import { UpdateStatus } from '@/lib/version_check';
 
+import { FavoritesPanel } from './FavoritesPanel';
+import { NotificationPanel } from './NotificationPanel';
+import { OfflineDownloadPanel } from './OfflineDownloadPanel';
 import { useVersionCheck } from './VersionCheckProvider';
 import { VersionPanel } from './VersionPanel';
-import { OfflineDownloadPanel } from './OfflineDownloadPanel';
-import { NotificationPanel } from './NotificationPanel';
-import { FavoritesPanel } from './FavoritesPanel';
 
 interface AuthInfo {
   username?: string;
@@ -61,6 +64,7 @@ export const UserMenu: React.FC = () => {
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isFavoritesPanelOpen, setIsFavoritesPanelOpen] = useState(false);
   const [isEmailSettingsOpen, setIsEmailSettingsOpen] = useState(false);
+  const [isDeviceManagementOpen, setIsDeviceManagementOpen] = useState(false);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [storageType, setStorageType] = useState<string>('localstorage');
   const [mounted, setMounted] = useState(false);
@@ -74,7 +78,7 @@ export const UserMenu: React.FC = () => {
 
   // Body 滚动锁定 - 使用 overflow 方式避免布局问题
   useEffect(() => {
-    if (isSettingsOpen || isChangePasswordOpen || isSubscribeOpen || isOfflineDownloadPanelOpen || isEmailSettingsOpen) {
+    if (isSettingsOpen || isChangePasswordOpen || isSubscribeOpen || isOfflineDownloadPanelOpen || isEmailSettingsOpen || isDeviceManagementOpen) {
       const body = document.body;
       const html = document.documentElement;
 
@@ -93,7 +97,7 @@ export const UserMenu: React.FC = () => {
         html.style.overflow = originalHtmlOverflow;
       };
     }
-  }, [isSettingsOpen, isChangePasswordOpen, isSubscribeOpen, isOfflineDownloadPanelOpen, isEmailSettingsOpen]);
+  }, [isSettingsOpen, isChangePasswordOpen, isSubscribeOpen, isOfflineDownloadPanelOpen, isEmailSettingsOpen, isDeviceManagementOpen]);
 
   // 设置相关状态
   const [defaultAggregateSearch, setDefaultAggregateSearch] = useState(true);
@@ -124,6 +128,24 @@ export const UserMenu: React.FC = () => {
   const [emailSettingsLoading, setEmailSettingsLoading] = useState(false);
   const [emailSettingsSaving, setEmailSettingsSaving] = useState(false);
 
+  // 设备管理状态
+  const [devices, setDevices] = useState<any[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [revoking, setRevoking] = useState<string | null>(null);
+
+  // 确认对话框状态
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   // 折叠面板状态
   const [isDoubanSectionOpen, setIsDoubanSectionOpen] = useState(true);
 
@@ -152,6 +174,8 @@ export const UserMenu: React.FC = () => {
   ];
 
   const [homeModules, setHomeModules] = useState<HomeModule[]>(defaultHomeModules);
+  const [homeBannerEnabled, setHomeBannerEnabled] = useState(true);
+  const [homeContinueWatchingEnabled, setHomeContinueWatchingEnabled] = useState(true);
 
   // 豆瓣数据源选项
   const doubanDataSourceOptions = [
@@ -421,6 +445,16 @@ export const UserMenu: React.FC = () => {
         setDanmakuHeatmapDisabled(savedDanmakuHeatmapDisabled === 'true');
       }
 
+      const savedHomeBannerEnabled = localStorage.getItem('homeBannerEnabled');
+      if (savedHomeBannerEnabled !== null) {
+        setHomeBannerEnabled(savedHomeBannerEnabled === 'true');
+      }
+
+      const savedHomeContinueWatchingEnabled = localStorage.getItem('homeContinueWatchingEnabled');
+      if (savedHomeContinueWatchingEnabled !== null) {
+        setHomeContinueWatchingEnabled(savedHomeContinueWatchingEnabled === 'true');
+      }
+
       // 加载首页模块配置
       const savedHomeModules = localStorage.getItem('homeModules');
       if (savedHomeModules !== null) {
@@ -498,6 +532,96 @@ export const UserMenu: React.FC = () => {
     } finally {
       setEmailSettingsSaving(false);
     }
+  };
+
+  // 加载设备列表
+  const loadDevices = async () => {
+    setDevicesLoading(true);
+    try {
+      const response = await fetch('/api/auth/devices');
+      if (response.ok) {
+        const data = await response.json();
+        setDevices(data.devices || []);
+      }
+    } catch (error) {
+      console.error('加载设备列表失败:', error);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  // 撤销单个设备
+  const handleRevokeDevice = async (tokenId: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: '撤销设备登录',
+      message: '确定要撤销该设备的登录吗？',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        setRevoking(tokenId);
+        try {
+          const response = await fetch('/api/auth/devices', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tokenId }),
+          });
+
+          if (response.ok) {
+            // 重新加载设备列表
+            await loadDevices();
+          } else {
+            alert('撤销失败，请重试');
+          }
+        } catch (error) {
+          console.error('撤销设备失败:', error);
+          alert('撤销失败，请重试');
+        } finally {
+          setRevoking(null);
+        }
+      },
+    });
+  };
+
+  // 撤销所有设备
+  const handleRevokeAllDevices = async () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: '登出所有设备',
+      message: '确定要登出所有设备吗？这将清除所有设备的登录状态（包括当前设备）。',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        try {
+          const response = await fetch('/api/auth/devices', {
+            method: 'POST',
+          });
+
+          if (response.ok) {
+            // 登出所有设备后，重定向到首页
+            window.location.href = '/';
+          } else {
+            alert('操作失败，请重试');
+          }
+        } catch (error) {
+          console.error('登出所有设备失败:', error);
+          alert('操作失败，请重试');
+        }
+      },
+    });
+  };
+
+  // 根据设备类型返回对应的图标
+  const getDeviceIcon = (deviceInfo: string) => {
+    const info = deviceInfo.toLowerCase();
+
+    if (info.includes('mobile') || info.includes('iphone') || info.includes('android')) {
+      return Smartphone;
+    }
+
+    if (info.includes('tablet') || info.includes('ipad')) {
+      return Tablet;
+    }
+
+    return Monitor;
   };
 
   // 点击外部区域关闭下拉框
@@ -805,6 +929,22 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  const handleHomeBannerToggle = (value: boolean) => {
+    setHomeBannerEnabled(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('homeBannerEnabled', String(value));
+      window.dispatchEvent(new CustomEvent('homeModulesUpdated'));
+    }
+  };
+
+  const handleHomeContinueWatchingToggle = (value: boolean) => {
+    setHomeContinueWatchingEnabled(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('homeContinueWatchingEnabled', String(value));
+      window.dispatchEvent(new CustomEvent('homeModulesUpdated'));
+    }
+  };
+
   // 首页模块配置处理函数
   const handleHomeModuleToggle = (id: string, enabled: boolean) => {
     const updatedModules = homeModules.map(module =>
@@ -898,6 +1038,8 @@ export const UserMenu: React.FC = () => {
     setNextEpisodePreCache(true);
     setNextEpisodeDanmakuPreload(true);
     setDisableAutoLoadDanmaku(false);
+    setHomeBannerEnabled(true);
+    setHomeContinueWatchingEnabled(true);
     setHomeModules(defaultHomeModules);
     setSearchTraditionalToSimplified(false);
 
@@ -919,6 +1061,8 @@ export const UserMenu: React.FC = () => {
       localStorage.setItem('disableAutoLoadDanmaku', 'false');
       localStorage.setItem('danmakuMaxCount', '0');
       localStorage.setItem('danmaku_heatmap_disabled', 'false');
+      localStorage.setItem('homeBannerEnabled', 'true');
+      localStorage.setItem('homeContinueWatchingEnabled', 'true');
       localStorage.setItem('homeModules', JSON.stringify(defaultHomeModules));
       localStorage.setItem('searchTraditionalToSimplified', 'false');
       window.dispatchEvent(new CustomEvent('homeModulesUpdated'));
@@ -996,7 +1140,7 @@ export const UserMenu: React.FC = () => {
         <div className='px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50'>
           <div className='space-y-1'>
             <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-1.5'>
+              <div className='flex items-center gap-0.5'>
                 <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                   当前用户
                 </span>
@@ -1014,6 +1158,22 @@ export const UserMenu: React.FC = () => {
                 >
                   <Mail className='w-3 h-3 text-gray-500 dark:text-gray-400' />
                 </button>
+                {/* 设备管理图标按钮 */}
+                {storageType !== 'localstorage' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsOpen(false);
+                      setIsDeviceManagementOpen(true);
+                      // 懒加载:打开面板时才请求设备列表
+                      loadDevices();
+                    }}
+                    className='p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
+                    title='设备管理'
+                  >
+                    <Monitor className='w-3 h-3 text-gray-500 dark:text-gray-400' />
+                  </button>
+                )}
               </div>
               <span
                 className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${(authInfo?.role || 'user') === 'owner'
@@ -2061,6 +2221,55 @@ export const UserMenu: React.FC = () => {
                     </p>
                   </div>
 
+                  {/* 首页顶部组件显示 */}
+                  <div className='space-y-2'>
+                    <div className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <button
+                        onClick={() => handleHomeBannerToggle(!homeBannerEnabled)}
+                        className='flex-shrink-0'
+                        title={homeBannerEnabled ? '点击隐藏' : '点击显示'}
+                      >
+                        {homeBannerEnabled ? (
+                          <Eye className='w-5 h-5 text-green-600 dark:text-green-400' />
+                        ) : (
+                          <EyeOff className='w-5 h-5 text-gray-400 dark:text-gray-500' />
+                        )}
+                      </button>
+                      <div className='flex-1'>
+                        <span className={`text-sm font-medium ${
+                          homeBannerEnabled
+                            ? 'text-gray-900 dark:text-gray-100'
+                            : 'text-gray-400 dark:text-gray-500'
+                        }`}>
+                          首页轮播图
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                      <button
+                        onClick={() => handleHomeContinueWatchingToggle(!homeContinueWatchingEnabled)}
+                        className='flex-shrink-0'
+                        title={homeContinueWatchingEnabled ? '点击隐藏' : '点击显示'}
+                      >
+                        {homeContinueWatchingEnabled ? (
+                          <Eye className='w-5 h-5 text-green-600 dark:text-green-400' />
+                        ) : (
+                          <EyeOff className='w-5 h-5 text-gray-400 dark:text-gray-500' />
+                        )}
+                      </button>
+                      <div className='flex-1'>
+                        <span className={`text-sm font-medium ${
+                          homeContinueWatchingEnabled
+                            ? 'text-gray-900 dark:text-gray-100'
+                            : 'text-gray-400 dark:text-gray-500'
+                        }`}>
+                          继续观看
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* 模块列表 */}
                   <div className='space-y-2'>
                     {homeModules.map((module, index) => (
@@ -2119,8 +2328,12 @@ export const UserMenu: React.FC = () => {
                   <button
                     onClick={() => {
                       setHomeModules(defaultHomeModules);
+                      setHomeBannerEnabled(true);
+                      setHomeContinueWatchingEnabled(true);
                       if (typeof window !== 'undefined') {
                         localStorage.setItem('homeModules', JSON.stringify(defaultHomeModules));
+                        localStorage.setItem('homeBannerEnabled', 'true');
+                        localStorage.setItem('homeContinueWatchingEnabled', 'true');
                         window.dispatchEvent(new CustomEvent('homeModulesUpdated'));
                       }
                     }}
@@ -2509,6 +2722,132 @@ export const UserMenu: React.FC = () => {
     </>
   );
 
+  // 设备管理面板内容
+  const deviceManagementPanel = (
+    <>
+      {/* 背景遮罩 */}
+      <div
+        className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000]'
+        onClick={() => setIsDeviceManagementOpen(false)}
+        onTouchMove={(e) => {
+          e.preventDefault();
+        }}
+        onWheel={(e) => {
+          e.preventDefault();
+        }}
+        style={{
+          touchAction: 'none',
+        }}
+      />
+
+      {/* 设备管理面板 */}
+      <div
+        className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl z-[1001] overflow-hidden'
+      >
+        <div
+          className='h-full max-h-[80vh] flex flex-col'
+          data-panel-content
+          onTouchMove={(e) => {
+            e.stopPropagation();
+          }}
+          style={{
+            touchAction: 'auto',
+          }}
+        >
+          {/* 标题栏 */}
+          <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+            <h3 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
+              设备管理
+            </h3>
+            <button
+              onClick={() => setIsDeviceManagementOpen(false)}
+              className='w-8 h-8 p-1 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+              aria-label='Close'
+            >
+              <X className='w-full h-full' />
+            </button>
+          </div>
+
+          {/* 设备列表 */}
+          <div className='flex-1 overflow-y-auto p-6'>
+            {devicesLoading ? (
+              <div className='space-y-3'>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className='animate-pulse'>
+                    <div className='h-20 bg-gray-200 dark:bg-gray-700 rounded-lg'></div>
+                  </div>
+                ))}
+                <div className='text-center text-sm text-gray-500 dark:text-gray-400 mt-4'>
+                  加载中...
+                </div>
+              </div>
+            ) : devices.length === 0 ? (
+              <div className='text-center py-8'>
+                <Monitor className='w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3' />
+                <p className='text-sm text-gray-500 dark:text-gray-400'>暂无登录设备</p>
+              </div>
+            ) : (
+              <div className='space-y-3'>
+                {devices.map((device) => {
+                  const DeviceIcon = getDeviceIcon(device.deviceInfo);
+                  return (
+                    <div
+                      key={device.tokenId}
+                      className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'
+                    >
+                      <div className='flex items-start justify-between'>
+                        <div className='flex-1'>
+                          <div className='flex items-center gap-2 mb-2'>
+                            <DeviceIcon className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+                            <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                              {device.deviceInfo}
+                            </span>
+                            {device.isCurrent && (
+                              <span className='px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full'>
+                                当前设备
+                              </span>
+                            )}
+                          </div>
+                          <div className='space-y-1 text-xs text-gray-500 dark:text-gray-400'>
+                            <div>登录时间: {new Date(device.createdAt).toLocaleString('zh-CN')}</div>
+                            <div>最后活跃: {new Date(device.lastUsed).toLocaleString('zh-CN')}</div>
+                          </div>
+                        </div>
+                        {!device.isCurrent && (
+                          <button
+                            onClick={() => handleRevokeDevice(device.tokenId)}
+                            disabled={revoking === device.tokenId}
+                            className='ml-3 px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border border-red-200 hover:border-red-300 dark:border-red-800 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                          >
+                            {revoking === device.tokenId ? '撤销中...' : '撤销'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 底部操作 */}
+          <div className='p-6 border-t border-gray-200 dark:border-gray-700 space-y-3'>
+            <button
+              onClick={handleRevokeAllDevices}
+              disabled={devices.length === 0}
+              className='w-full px-4 py-2.5 bg-red-500 hover:bg-red-600 disabled:bg-red-400 dark:bg-red-600 dark:hover:bg-red-700 dark:disabled:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed'
+            >
+              登出所有设备
+            </button>
+            <p className='text-xs text-gray-500 dark:text-gray-400 text-center'>
+              登出所有设备后需要重新登录
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <>
       <div className='relative'>
@@ -2586,6 +2925,51 @@ export const UserMenu: React.FC = () => {
       {isEmailSettingsOpen &&
         mounted &&
         createPortal(emailSettingsPanel, document.body)}
+
+      {/* 使用 Portal 将设备管理面板渲染到 document.body */}
+      {isDeviceManagementOpen &&
+        mounted &&
+        createPortal(deviceManagementPanel, document.body)}
+
+      {/* 确认对话框 */}
+      {confirmDialog.isOpen &&
+        mounted &&
+        createPortal(
+          <div className='fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm'>
+            <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4'>
+              {/* 标题 */}
+              <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
+                <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                  {confirmDialog.title}
+                </h3>
+              </div>
+
+              {/* 内容 */}
+              <div className='p-6'>
+                <p className='text-gray-700 dark:text-gray-300'>
+                  {confirmDialog.message}
+                </p>
+              </div>
+
+              {/* 按钮 */}
+              <div className='p-6 pt-0 flex gap-3 justify-end'>
+                <button
+                  onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                  className='px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors'
+                >
+                  取消
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className='px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-colors'
+                >
+                  确定
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 };

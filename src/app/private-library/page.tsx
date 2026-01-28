@@ -2,15 +2,16 @@
 
 'use client';
 
+import { ArrowDownWideNarrow, ArrowUpNarrowWide,Film } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { Film, ArrowUpDown, ArrowDownWideNarrow, ArrowUpNarrowWide } from 'lucide-react';
+import { useEffect, useMemo,useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import { base58Encode } from '@/lib/utils';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
-import { base58Encode } from '@/lib/utils';
 
 type LibrarySourceType = 'openlist' | 'emby' | 'xiaoya' | `emby:${string}` | `emby_${string}`;
 

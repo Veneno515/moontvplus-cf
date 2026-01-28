@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { TOKEN_CONFIG } from '@/lib/refresh-token';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -35,39 +36,77 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 其他模式：只验证签名
+  // 其他模式：验证签名和时间戳，支持自动续期
   // 检查是否有用户名（非localStorage模式下密码不存储在cookie中）
-  if (!authInfo.username || !authInfo.signature) {
+  if (!authInfo.username || !authInfo.role || !authInfo.signature || !authInfo.timestamp) {
     return handleAuthFailure(request, pathname);
   }
 
-  // 验证签名（如果存在）
-  if (authInfo.signature) {
-    const isValidSignature = await verifySignature(
-      authInfo.username,
-      authInfo.signature,
-      process.env.PASSWORD || ''
-    );
-
-    // 签名验证通过即可
-    if (isValidSignature) {
-      return NextResponse.next();
-    }
+  // 强制要求新版 Cookie（必须包含 tokenId 和 refreshToken）
+  if (!authInfo.tokenId || !authInfo.refreshToken || !authInfo.refreshExpires) {
+    console.log(`Old cookie format detected for ${authInfo.username}, forcing re-login`);
+    return handleAuthFailure(request, pathname);
   }
 
-  // 签名验证失败或不存在签名
-  return handleAuthFailure(request, pathname);
+  // 验证 Token 时间戳
+  const ACCESS_TOKEN_AGE = TOKEN_CONFIG.ACCESS_TOKEN_AGE;
+  const now = Date.now();
+  const age = now - authInfo.timestamp;
+
+  // 先检查 Refresh Token 是否过期
+  if (now >= authInfo.refreshExpires) {
+    console.log(`Refresh token expired for ${authInfo.username}, redirecting to login`);
+    return handleAuthFailure(request, pathname);
+  }
+
+  // Access Token 已过期
+  if (age > ACCESS_TOKEN_AGE) {
+    console.log(`Access token expired for ${authInfo.username}`);
+    // 对于 API 请求，返回 401，让前端拦截器刷新并重试
+    if (pathname.startsWith('/api')) {
+      return new NextResponse('Access token expired', { status: 401 });
+    }
+    // 对于页面请求，允许通过，让前端 TokenRefreshManager 在页面加载后刷新
+    // 不能返回 401 或重定向，否则页面无法加载，前端代码无法运行
+    console.log(`Allowing page request to pass, frontend will refresh token`);
+  }
+
+  // Access Token 未过期，验证签名
+  const isValidSignature = await verifySignature(
+    authInfo.username,
+    authInfo.role,
+    authInfo.timestamp,
+    authInfo.signature,
+    process.env.PASSWORD || ''
+  );
+
+  if (!isValidSignature) {
+    return handleAuthFailure(request, pathname);
+  }
+
+  // 签名验证通过
+  // 注意：Token 续期由前端负责，Middleware 不再自动刷新
+  return NextResponse.next();
 }
 
 // 验证签名
 async function verifySignature(
-  data: string,
+  username: string,
+  role: string,
+  timestamp: number,
   signature: string,
   secret: string
 ): Promise<boolean> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
-  const messageData = encoder.encode(data);
+
+  // 构造与生成签名时相同的数据结构
+  const dataToSign = JSON.stringify({
+    username,
+    role,
+    timestamp
+  });
+  const messageData = encoder.encode(dataToSign);
 
   try {
     // 导入密钥
@@ -133,6 +172,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置middleware匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/auth/oidc|api/cron/|api/server-config|api/proxy-m3u8|api/cms-proxy|api/tvbox/subscribe|api/theme/css|api/openlist/cms-proxy|api/openlist/play|api/emby/cms-proxy|api/emby/play|api/emby/sources).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/auth/oidc|api/auth/refresh|api/cron/|api/server-config|api/proxy-m3u8|api/cms-proxy|api/tvbox/subscribe|api/theme/css|api/openlist/cms-proxy|api/openlist/play|api/emby/cms-proxy|api/emby/play|api/emby/sources).*)',
   ],
 };

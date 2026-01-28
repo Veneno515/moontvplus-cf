@@ -153,7 +153,7 @@ class WatchRoomSocketManager {
     });
 
     // 监听心跳响应
-    this.socket.on('heartbeat:pong', (data: { timestamp: number }) => {
+    this.socket.on('heartbeat:pong', (_data: { timestamp: number }) => {
       this.lastHeartbeatResponse = Date.now();
     });
 

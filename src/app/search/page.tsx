@@ -1,10 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any,@typescript-eslint/no-non-null-assertion,no-empty */
 'use client';
 
-import { ChevronUp, RefreshCw, Search, X, Film, HardDrive, Magnet } from 'lucide-react';
+import { ChevronUp, Film, HardDrive, Magnet,RefreshCw, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { startTransition, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import {
   addSearchHistory,
   clearSearchHistory,
@@ -13,15 +14,14 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { SearchResult } from '@/lib/types';
-import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 
+import AcgSearch from '@/components/AcgSearch';
+import CapsuleSwitch from '@/components/CapsuleSwitch';
 import PageLayout from '@/components/PageLayout';
+import PansouSearch from '@/components/PansouSearch';
 import SearchResultFilter, { SearchFilterCategory } from '@/components/SearchResultFilter';
 import SearchSuggestions from '@/components/SearchSuggestions';
 import VideoCard, { VideoCardHandle } from '@/components/VideoCard';
-import PansouSearch from '@/components/PansouSearch';
-import AcgSearch from '@/components/AcgSearch';
-import CapsuleSwitch from '@/components/CapsuleSwitch';
 
 function SearchPageClient() {
   // 搜索历史

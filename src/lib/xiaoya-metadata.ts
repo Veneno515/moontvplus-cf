@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { XiaoyaClient } from './xiaoya.client';
-import { parseNFO, NFOMetadata } from './nfo-parser';
+import { NFOMetadata,parseNFO } from './nfo-parser';
 import { parseVideoFileName } from './video-parser';
+import { XiaoyaClient } from './xiaoya.client';
 
 export interface XiaoyaMetadata {
   tmdbId?: number;
@@ -208,7 +208,7 @@ export async function getXiaoyaMetadata(
     const fileName = pathParts[pathParts.length - 1];
     const searchQuery = fileName
       .replace(/\.(mp4|mkv|avi|m3u8|flv|ts)$/i, '')
-      .replace(/[\[\]()]/g, ' ')
+      .replace(/[[\]()]/g, ' ')
       .trim();
 
     // 如果文件名是纯数字（可能带小数点）或者是 SxxExx 格式，跳过文件名搜索，直接使用文件夹名
@@ -240,7 +240,7 @@ export async function getXiaoyaMetadata(
   // 优先级 4: 实时搜索 TMDb（使用文件夹名）
   if (tmdbApiKey) {
     const searchQuery = folderName
-      .replace(/[\[\](){}]/g, ' ')
+      .replace(/[[\](){}]/g, ' ')
       .replace(/\d{4}/g, '')
       .trim();
 

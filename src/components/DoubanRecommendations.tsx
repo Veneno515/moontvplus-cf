@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback,useEffect, useState } from 'react';
+
 import { useEnableComments } from '@/hooks/useEnableComments';
-import VideoCard from '@/components/VideoCard';
+
 import ScrollableRow from '@/components/ScrollableRow';
+import VideoCard from '@/components/VideoCard';
 
 interface DoubanRecommendation {
   doubanId: string;

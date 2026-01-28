@@ -225,7 +225,7 @@ export default function CorrectDialog({
     try {
       // 构建标题和ID：如果是第二季及以后，在标题后加上季度名称，并使用季度ID
       let finalTitle = result.title || result.name;
-      let finalTmdbId = result.id;
+      const finalTmdbId = result.id;
 
       if (season && season.season_number > 1) {
         finalTitle = `${finalTitle} ${season.name}`;

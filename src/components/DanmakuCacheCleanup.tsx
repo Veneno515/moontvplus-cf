@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { initDanmakuModule } from '@/lib/danmaku/api';
 
 /**

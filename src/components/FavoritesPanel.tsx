@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Star, X, AlertTriangle } from 'lucide-react';
+import { AlertTriangle,Star, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -12,6 +12,7 @@ import {
   getAllPlayRecords,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+
 import VideoCard from '@/components/VideoCard';
 
 interface FavoriteItem {

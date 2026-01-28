@@ -165,19 +165,15 @@ export class EmbyClient {
     const url = `${this.serverUrl}/Users/Me`;
     const headers = this.getHeaders();
 
-    try {
-      const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`获取当前用户信息失败 (${response.status}): ${errorText}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`获取当前用户信息失败 (${response.status}): ${errorText}`);
     }
+
+    const data = await response.json();
+    return data;
   }
 
   async getUserViews(): Promise<EmbyView[]> {
@@ -467,7 +463,7 @@ export class EmbyClient {
     }
   }
 
-  async getStreamUrl(itemId: string, direct: boolean = true, forceDirectUrl: boolean = false): Promise<string> {
+  async getStreamUrl(itemId: string, direct = true, forceDirectUrl = false): Promise<string> {
     const token = this.apiKey || this.authToken;
 
     // 如果启用了代理播放且不是强制获取直接URL，返回代理URL

@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import { Bot, Loader2, Send, Sparkles, Trash2,X } from 'lucide-react';
+import React, { useEffect,useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, Bot, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
 import { VideoContext } from '@/lib/ai-orchestrator';
 
 interface ChatMessage {

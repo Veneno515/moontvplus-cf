@@ -3,6 +3,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 
 interface HttpWarningDialogProps {

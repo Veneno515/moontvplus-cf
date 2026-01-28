@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { NextRequest, NextResponse } from 'next/server';
+import nodeFetch from 'node-fetch';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import nodeFetch from 'node-fetch';
 import { getNextApiKey } from '@/lib/tmdb.client';
 
 export const runtime = 'nodejs';

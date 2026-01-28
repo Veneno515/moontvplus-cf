@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
-import { OpenListClient } from '@/lib/openlist.client';
 import {
   getCachedMetaInfo,
   MetaInfo,
@@ -260,13 +259,6 @@ async function handleOpenListProxy(request: NextRequest) {
     );
   }
 
-  const rootPath = openListConfig.RootPath || '/';
-  const client = new OpenListClient(
-    openListConfig.URL,
-    openListConfig.Username,
-    openListConfig.Password
-  );
-
   // 读取 metainfo (从数据库或缓存)
   let metaInfo: MetaInfo | null = getCachedMetaInfo();
 
@@ -296,7 +288,7 @@ async function handleOpenListProxy(request: NextRequest) {
   if (wd) {
     const results = Object.entries(metaInfo.folders)
       .filter(
-        ([key, info]) =>
+        ([_key, info]) =>
           info.folderName.toLowerCase().includes(wd.toLowerCase()) ||
           info.title.toLowerCase().includes(wd.toLowerCase())
       )

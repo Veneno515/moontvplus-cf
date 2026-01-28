@@ -1,8 +1,10 @@
 // React Hook for Live Page Synchronization
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback,useEffect, useRef } from 'react';
+
 import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
+
 import type { LiveState } from '@/types/watch-room';
 
 interface UseLiveSyncOptions {

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { getUserDevices, revokeRefreshToken } from '@/lib/refresh-token';
 
 export const runtime = 'nodejs';
 
@@ -47,6 +48,25 @@ export async function POST(request: NextRequest) {
 
     // 修改密码（只更新V2存储）
     await db.changePasswordV2(username, newPassword);
+
+    // 撤销除当前设备外的所有 Refresh Token
+    try {
+      const currentTokenId = authInfo.tokenId;
+      const devices = await getUserDevices(username);
+
+      // 撤销所有非当前设备的 token
+      for (const device of devices) {
+        if (device.tokenId !== currentTokenId) {
+          await revokeRefreshToken(username, device.tokenId);
+          console.log(`Revoked token ${device.tokenId} for ${username} after password change`);
+        }
+      }
+
+      console.log(`Password changed for ${username}, revoked ${devices.length - 1} other devices`);
+    } catch (error) {
+      console.error('Failed to revoke other devices after password change:', error);
+      // 不影响密码修改的成功，只记录错误
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

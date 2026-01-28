@@ -1,8 +1,10 @@
 // React Hook for Voice Chat in Watch Room
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import type { WatchRoomSocket } from '@/lib/watch-room-socket';
+
 import type { Member } from '@/types/watch-room';
 
 interface UseVoiceChatOptions {
@@ -520,7 +522,7 @@ export function useVoiceChat({
   }, [switchToServerRelay]);
 
   // 播放服务器中转的音频 - 使用Web Audio API播放PCM数据
-  const playServerRelayAudio = useCallback(async (userId: string, audioData: number[], sampleRate: number = 16000) => {
+  const playServerRelayAudio = useCallback(async (userId: string, audioData: number[], sampleRate = 16000) => {
     if (!isSpeakerEnabled) return;
 
     try {

@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 验证扫描间隔
-      let scanInterval = parseInt(ScanInterval) || 0;
+      const scanInterval = parseInt(ScanInterval) || 0;
       if (scanInterval > 0 && scanInterval < 60) {
         return NextResponse.json(
           { error: '定时扫描间隔最低为 60 分钟' },

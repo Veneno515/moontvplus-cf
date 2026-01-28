@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useDownload } from '@/contexts/DownloadContext';
+
 import { M3U8DownloadTask } from '@/lib/m3u8-downloader';
+
+import { useDownload } from '@/contexts/DownloadContext';
 
 export function DownloadPanel() {
   const { tasks, showDownloadPanel, setShowDownloadPanel, startTask, pauseTask, cancelTask, retryFailedSegments, getProgress } = useDownload();

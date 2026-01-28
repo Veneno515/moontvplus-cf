@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
+import { Link as LinkIcon, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, {
   useCallback,
@@ -8,13 +9,13 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Settings } from 'lucide-react';
+
+import type { DanmakuComment,DanmakuSelection } from '@/lib/danmaku/types';
+import { EpisodeFilterConfig,SearchResult } from '@/lib/types';
+import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
 import DanmakuPanel from '@/components/DanmakuPanel';
 import EpisodeFilterSettings from '@/components/EpisodeFilterSettings';
-import type { DanmakuSelection, DanmakuComment } from '@/lib/danmaku/types';
-import { SearchResult, EpisodeFilterConfig } from '@/lib/types';
-import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
 // 定义视频信息类型
 interface VideoInfo {
@@ -810,8 +811,10 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                           }`.trim()}
                       >
                         {/* 封面 */}
-                        <div className='flex-shrink-0 w-12 h-20 bg-gray-300 dark:bg-gray-600 rounded overflow-hidden'>
-                          {source.poster && (
+                        <div className='flex-shrink-0 w-12 h-20 bg-gray-300 dark:bg-gray-600 rounded overflow-hidden flex items-center justify-center'>
+                          {source.source === 'directplay' ? (
+                            <LinkIcon className='w-6 h-6 text-blue-500' />
+                          ) : source.poster ? (
                             <img
                               src={processImageUrl(source.poster)}
                               alt={source.title}
@@ -821,7 +824,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                                 target.style.display = 'none';
                               }}
                             />
-                          )}
+                          ) : null}
                         </div>
 
                         {/* 信息区域 */}

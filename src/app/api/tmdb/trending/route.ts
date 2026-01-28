@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextResponse } from 'next/server';
-import { getTMDBTrendingContent, getTMDBVideos } from '@/lib/tmdb.client';
+
 import { getConfig } from '@/lib/config';
 import { fetchDoubanData } from '@/lib/douban';
+import { getTMDBTrendingContent, getTMDBVideos } from '@/lib/tmdb.client';
 
 // 缓存配置 - 服务器内存缓存3小时
 const CACHE_DURATION = 3 * 60 * 60 * 1000; // 3小时

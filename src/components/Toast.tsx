@@ -1,7 +1,7 @@
 'use client';
 
+import { CheckCircle, Info, X,XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 
 export interface ToastProps {
   message: string;

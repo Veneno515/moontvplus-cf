@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -23,9 +22,6 @@ export async function GET(request: NextRequest) {
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // 获取配置
-    const adminConfig = await getConfig();
 
     // 判定操作者角色
     let operatorRole: 'owner' | 'admin' | 'user' = 'user';

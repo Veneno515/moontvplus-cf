@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
-import { searchPansou } from '@/lib/pansou.client';
+import { PansouLink, searchPansou } from '@/lib/pansou.client';
 
 export const runtime = 'nodejs';
 
@@ -44,13 +44,50 @@ export async function POST(request: NextRequest) {
       password,
     });
 
+    const rawBlocklist = config.SiteConfig.PansouKeywordBlocklist || '';
+    const normalizedBlocklist = rawBlocklist.replace(/，/g, ',');
+    const blockedKeywords = normalizedBlocklist
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    let filteredResults = results;
+
+    if (blockedKeywords.length > 0 && results.merged_by_type) {
+      const mergedByType: Record<string, PansouLink[]> = {};
+      let total = 0;
+
+      const shouldBlock = (link: PansouLink) => {
+        const content = `${link.note || ''} ${link.url || ''} ${link.source || ''}`.toLowerCase();
+        return blockedKeywords.some((item) =>
+          content.includes(item.toLowerCase())
+        );
+      };
+
+      Object.entries(results.merged_by_type).forEach(([type, links]) => {
+        const filteredLinks = links.filter((link) => !shouldBlock(link));
+        if (filteredLinks.length > 0) {
+          mergedByType[type] = filteredLinks;
+          total += filteredLinks.length;
+        }
+      });
+
+      filteredResults = {
+        ...results,
+        merged_by_type: mergedByType,
+        total,
+      };
+    }
+
     console.log('Pansou 搜索结果:', {
-      total: results.total,
-      hasData: !!results.merged_by_type,
-      types: results.merged_by_type ? Object.keys(results.merged_by_type) : [],
+      total: filteredResults.total,
+      hasData: !!filteredResults.merged_by_type,
+      types: filteredResults.merged_by_type
+        ? Object.keys(filteredResults.merged_by_type)
+        : [],
     });
 
-    return NextResponse.json(results);
+    return NextResponse.json(filteredResults);
   } catch (error: any) {
     console.error('Pansou 搜索失败:', error);
     return NextResponse.json(

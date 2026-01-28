@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect,useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, AlertCircle, Plus } from 'lucide-react';
 
-import PageLayout from '@/components/PageLayout';
 import { getTMDBImageUrl } from '@/lib/tmdb.client';
 import { processImageUrl } from '@/lib/utils';
+
+import PageLayout from '@/components/PageLayout';
 
 interface TMDBResult {
   id: number;

@@ -796,8 +796,8 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // 获取用户列表（分页，新版本）
   async getUserListV2(
-    offset: number = 0,
-    limit: number = 20,
+    offset = 0,
+    limit = 20,
     ownerUsername?: string
   ): Promise<{
     users: Array<{

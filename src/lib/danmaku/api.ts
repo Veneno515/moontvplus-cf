@@ -1,6 +1,14 @@
 // 弹幕 API 服务封装（通过本地代理转发）
+import {
+  clearAllDanmakuCache,
+  clearDanmakuCache,
+  clearExpiredDanmakuCache,
+  generateCacheKey,
+  getDanmakuCacheStats,
+  getDanmakuFromCache,
+  saveDanmakuToCache,
+} from './cache';
 import type {
-  DanmakuAnime,
   DanmakuComment,
   DanmakuCommentsResponse,
   DanmakuEpisodesResponse,
@@ -9,16 +17,6 @@ import type {
   DanmakuSearchResponse,
   DanmakuSettings,
 } from './types';
-
-import {
-  getDanmakuFromCache,
-  saveDanmakuToCache,
-  clearExpiredDanmakuCache,
-  clearAllDanmakuCache,
-  clearDanmakuCache,
-  getDanmakuCacheStats,
-  generateCacheKey,
-} from './cache';
 
 // 初始化弹幕模块（清理过期缓存）
 let _cacheCleanupInitialized = false;
@@ -46,8 +44,8 @@ export {
   clearAllDanmakuCache,
   clearDanmakuCache,
   clearExpiredDanmakuCache,
-  getDanmakuCacheStats,
   generateCacheKey,
+  getDanmakuCacheStats,
   getDanmakuFromCache,
 };
 

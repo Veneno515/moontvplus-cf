@@ -5,7 +5,6 @@
  */
 
 import { fetchDoubanData as fetchDoubanAPI } from '@/lib/douban';
-import { searchTMDB, getTVSeasons } from '@/lib/tmdb.search';
 import { getNextApiKey } from '@/lib/tmdb.client';
 
 export interface VideoContext {

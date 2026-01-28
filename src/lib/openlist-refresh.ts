@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
+import parseTorrentName from 'parse-torrent-name';
+
+import type { AdminConfig } from '@/lib/admin.types';
 import { getConfig } from '@/lib/config';
 import { generateFolderKey } from '@/lib/crypto';
 import { db } from '@/lib/db';
 import { OpenListClient } from '@/lib/openlist.client';
 import {
-  getCachedMetaInfo,
   invalidateMetaInfoCache,
   MetaInfo,
   setCachedMetaInfo,
@@ -18,9 +20,7 @@ import {
   updateScanTaskProgress,
 } from '@/lib/scan-task';
 import { parseSeasonFromTitle } from '@/lib/season-parser';
-import { searchTMDB, getTVSeasonDetails } from '@/lib/tmdb.search';
-import parseTorrentName from 'parse-torrent-name';
-import type { AdminConfig } from '@/lib/admin.types';
+import { getTVSeasonDetails,searchTMDB } from '@/lib/tmdb.search';
 
 /**
  * 获取根目录列表（兼容新旧配置）
@@ -58,7 +58,7 @@ async function migrateToMultiRoot(openListConfig: NonNullable<AdminConfig['OpenL
     const metaInfo: MetaInfo = JSON.parse(metainfoContent);
 
     // 2. 迁移 folderName：加上原根路径前缀
-    for (const [key, info] of Object.entries(metaInfo.folders)) {
+    for (const [_key, info] of Object.entries(metaInfo.folders)) {
       const oldFolderName = info.folderName;
       const newFolderName = `${oldRootPath}${oldRootPath.endsWith('/') ? '' : '/'}${oldFolderName}`;
       info.folderName = newFolderName;
@@ -83,7 +83,7 @@ async function migrateToMultiRoot(openListConfig: NonNullable<AdminConfig['OpenL
 /**
  * 启动 OpenList 刷新任务
  */
-export async function startOpenListRefresh(clearMetaInfo: boolean = false): Promise<{ taskId: string }> {
+export async function startOpenListRefresh(clearMetaInfo = false): Promise<{ taskId: string }> {
   const config = await getConfig();
   const openListConfig = config.OpenListConfig;
 

@@ -2,8 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { embyManager } from '@/lib/emby-manager';
 import { getCachedEmbyList, setCachedEmbyList } from '@/lib/emby-cache';
+import { embyManager } from '@/lib/emby-manager';
 
 export const runtime = 'nodejs';
 

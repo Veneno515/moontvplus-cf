@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
+import { NextRequest, NextResponse } from 'next/server';
+
 import { fetchDoubanData } from '@/lib/douban';
 import { fetchDoubanWithVerification } from '@/lib/douban-anti-crawler';
 

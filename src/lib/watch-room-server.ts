@@ -1,14 +1,13 @@
 // Socket.IO 观影室服务器逻辑（共享代码）
 import { Server as SocketIOServer, Socket } from 'socket.io';
+
 import type {
-  Room,
-  Member,
-  PlayState,
-  LiveState,
   ChatMessage,
-  ServerToClientEvents,
   ClientToServerEvents,
+  Member,
+  Room,
   RoomMemberInfo,
+  ServerToClientEvents,
 } from '@/types/watch-room';
 
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;

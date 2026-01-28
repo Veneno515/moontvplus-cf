@@ -11,6 +11,61 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
 	{
+    version: '210.1.2',
+    date: '2026-01-27',
+	added: [
+    ],
+    changed: [
+    ],
+    fixed: [
+		"修复刷新token失效无限重定向"
+	]
+	},{
+    version: '210.1.1',
+    date: '2026-01-27',
+	added: [
+    ],
+    changed: [
+    ],
+    fixed: [
+		"修复token过期重定向无法续期的问题"
+	]
+	},{
+    version: '210.1.0',
+    date: '2026-01-27',
+	added: [
+		"增加直链播放",
+		"直播兼容txt格式",
+    ],
+    changed: [
+		"首页轮播图和继续观看可隐藏",
+		"刷新token改为前端进行防止redis数据库方式报错"
+    ],
+    fixed: [
+	]
+	},
+	{
+    version: '210.0.0',
+    date: '2026-01-25',
+	added: [
+		"新增网络直播功能",
+		"动漫磁力搜索增加蜜柑",
+		"动漫磁力搜索增加动漫花园",
+		"pansou增加关键词过滤",
+		"cloudflare workers部署支持",
+    ],
+    changed: [
+		"去广告增强",
+		"登录验证机制改为Token+Refresh Token形式",
+		"移除旧版用户操作残留"
+    ],
+    fixed: [
+		"修复缓存弹幕限制后不显示原始数量",
+		"修复测速缓存导致的错误测速数据",
+		"修复videocard，2000年只显示0年"
+	]
+	},
+	{
     version: '209.1.0',
     date: '2026-01-21',
 	added: [

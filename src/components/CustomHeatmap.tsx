@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback,useEffect, useRef, useState } from 'react';
 
 interface DanmakuData {
   time: number;

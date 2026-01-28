@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
-import { DanmakuFilterConfig, DanmakuFilterRule } from '@/lib/types';
+import { Plus, ToggleLeft, ToggleRight,Trash2, X } from 'lucide-react';
+import { useEffect, useRef,useState } from 'react';
+
 import { getDanmakuFilterConfig, saveDanmakuFilterConfig } from '@/lib/db.client';
+import { DanmakuFilterConfig, DanmakuFilterRule } from '@/lib/types';
 
 interface DanmakuFilterSettingsProps {
   isOpen: boolean;

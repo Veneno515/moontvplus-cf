@@ -19,6 +19,8 @@ export interface LegadoRuleSearch {
   lastChapter?: string;
 }
 
+export type LegadoRuleExplore = LegadoRuleSearch;
+
 export interface LegadoRuleBookInfo {
   name?: string;
   author?: string;
@@ -48,6 +50,7 @@ export interface LegadoBookSourceRule {
   bookSourceGroup?: string;
   enabled?: boolean;
   enabledExplore?: boolean;
+  exploreUrl?: string;
   header?: string | Record<string, string>;
   loginUrl?: string;
   searchUrl?: string;
@@ -55,6 +58,7 @@ export interface LegadoBookSourceRule {
   tocUrl?: string;
   chapterUrl?: string;
   ruleSearch?: LegadoRuleSearch;
+  ruleExplore?: LegadoRuleExplore;
   ruleBookInfo?: LegadoRuleBookInfo;
   ruleToc?: LegadoRuleToc;
   ruleContent?: LegadoRuleContent;

@@ -221,15 +221,44 @@ function splitAlternatives(rule?: string): string[] {
   return (rule || '').split('||').map((item) => item.trim()).filter(Boolean);
 }
 
+function isLegadoAttrToken(value: string) {
+  return /^(href|src|title|alt|text|textNodes|html|content|value|data-[\w-]+)$/i.test(value.trim());
+}
+
+function normalizeLegadoSelector(selector: string) {
+  const trimmed = selector.trim();
+  if (!trimmed) return '';
+  const classMatch = trimmed.match(/^class\.([\w-]+(?:\.[\w-]+)*)$/i);
+  if (classMatch) return classMatch[1].split('.').map((item) => `.${item}`).join('');
+  const idMatch = trimmed.match(/^id\.([\w-]+)$/i);
+  if (idMatch) return `#${idMatch[1]}`;
+  const tagMatch = trimmed.match(/^tag\.([\w-]+)$/i);
+  if (tagMatch) return tagMatch[1];
+  return trimmed;
+}
+
 function parseStep(step: string): { selector: string; attr: string } {
   const trimmed = step.trim();
-  const attrMatch = trimmed.match(/(?:@|::)(text|textNodes|html|href|src|content|value|data-[\w-]+|[\w-]+)$/i);
+  if (isLegadoAttrToken(trimmed)) return { selector: '', attr: trimmed };
+
+  const parts = trimmed.split('@').map((item) => item.trim()).filter(Boolean);
+  if (parts.length > 1) {
+    const last = parts[parts.length - 1];
+    const hasAttr = isLegadoAttrToken(last);
+    const selectorParts = hasAttr ? parts.slice(0, -1) : parts;
+    return {
+      selector: selectorParts.map(normalizeLegadoSelector).filter(Boolean).join(' '),
+      attr: hasAttr ? last : '',
+    };
+  }
+
+  const attrMatch = trimmed.match(/(?:@|::)(text|textNodes|html|href|src|title|alt|content|value|data-[\w-]+)$/i);
   if (attrMatch) {
-    return { selector: trimmed.slice(0, attrMatch.index).trim(), attr: attrMatch[1] };
+    return { selector: normalizeLegadoSelector(trimmed.slice(0, attrMatch.index).trim()), attr: attrMatch[1] };
   }
   const dotAttr = trimmed.match(/\.(text|html|href|src)$/i);
-  if (dotAttr) return { selector: trimmed.slice(0, dotAttr.index).trim(), attr: dotAttr[1] };
-  return { selector: trimmed, attr: '' };
+  if (dotAttr) return { selector: normalizeLegadoSelector(trimmed.slice(0, dotAttr.index).trim()), attr: dotAttr[1] };
+  return { selector: normalizeLegadoSelector(trimmed), attr: '' };
 }
 
 function stripFilters(rule: string) {
@@ -277,13 +306,65 @@ function readValue($: cheerio.CheerioAPI, root: cheerio.Cheerio<any>, rule?: str
   return '';
 }
 
+function readValues($: cheerio.CheerioAPI, root: cheerio.Cheerio<any>, rule?: string, baseUrl?: string): string[] {
+  for (const alternative of splitAlternatives(rule)) {
+    const normalized = stripFilters(alternative);
+    const steps = normalized.split(/&&|@css:/).map((item) => item.trim()).filter(Boolean);
+    let current = root;
+    let attr = '';
+    for (const rawStep of steps) {
+      const parsed = parseStep(rawStep);
+      if (parsed.selector) current = current.find(parsed.selector);
+      if (parsed.attr) attr = parsed.attr;
+    }
+    if (current.length === 0 && steps.length === 1) {
+      const parsed = parseStep(steps[0]);
+      if (!parsed.selector && parsed.attr) current = root;
+    }
+    const normalizedAttr = attr.toLowerCase();
+    const values = current.toArray().map((element) => {
+      const node = $(element);
+      let value = '';
+      if (!attr || normalizedAttr === 'text' || normalizedAttr === 'textnodes') value = node.text();
+      else if (normalizedAttr === 'html') value = node.html() || '';
+      else value = node.attr(attr) || '';
+      value = he.decode(value || '').replace(/\u00a0/g, ' ').trim();
+      if ((normalizedAttr === 'href' || normalizedAttr === 'src' || normalizedAttr === 'data-original') && value && baseUrl) value = normalizeUrl(baseUrl, value);
+      return value;
+    }).filter(Boolean);
+    if (values.length > 0) return values;
+  }
+  return [];
+}
+
+function applyContentJsRule(value: string, jsRule: string): string {
+  if (/result\.split\(["']\\n["']\)|<img\s+src=/.test(jsRule)) {
+    return value
+      .split(/\n+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((src) => `<img src="${src}" style="max-width:100%; display:block;" referrerpolicy="no-referrer">`)
+      .join('');
+  }
+  return value;
+}
+
 function contentFromRule(raw: string, rule?: string, baseUrl?: string): string {
   const json = parseJsonMaybe(raw);
   if (json && (ruleIsJson(rule) || rule?.trim().startsWith('@js:'))) {
     return readJsonRule(json, rule, undefined, baseUrl);
   }
+  const rawRule = rule || '';
+  const jsIndex = rawRule.indexOf('@js:');
+  const selectorRule = jsIndex >= 0 ? rawRule.slice(0, jsIndex).trim() : rawRule;
+  const jsRule = jsIndex >= 0 ? rawRule.slice(jsIndex + 4).trim() : '';
   const $ = cheerio.load(raw);
-  return readValue($, $.root(), rule, baseUrl);
+  if (jsRule) {
+    const values = readValues($, $.root(), selectorRule, baseUrl);
+    const value = values.length > 0 ? values.join('\n') : readValue($, $.root(), selectorRule, baseUrl);
+    return applyContentJsRule(value, jsRule);
+  }
+  return readValue($, $.root(), selectorRule, baseUrl);
 }
 
 function cleanContent(value: string) {
@@ -435,6 +516,57 @@ function makeItem(source: BookSource, partial: Partial<BookListItem> & { detailH
   };
 }
 
+interface ExploreTarget {
+  title: string;
+  template: string;
+  page: number;
+}
+
+function hasExplore(rule: LegadoBookSourceRule) {
+  return rule.enabledExplore !== false && !!rule.exploreUrl && !!rule.ruleExplore?.bookList;
+}
+
+function parseExploreUrl(exploreUrl?: string): Array<{ title: string; template: string }> {
+  const raw = (exploreUrl || '').trim();
+  if (!raw) return [];
+  const json = parseJsonMaybe(raw);
+  if (Array.isArray(json)) {
+    return json
+      .map((item) => ({ title: jsonPrimitiveToString(item?.title), template: jsonPrimitiveToString(item?.url) }))
+      .filter((item) => !!item.title && !!item.template);
+  }
+  return raw
+    .split('&&')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      const index = item.indexOf('::');
+      if (index >= 0) return { title: item.slice(0, index).trim(), template: item.slice(index + 2).trim() };
+      return { title: item, template: item };
+    })
+    .filter((item) => !!item.template);
+}
+
+function encodeExploreTarget(target: ExploreTarget) {
+  return `legado-explore:${Buffer.from(JSON.stringify(target), 'utf8').toString('base64url')}`;
+}
+
+function decodeExploreTarget(href?: string): ExploreTarget | null {
+  if (!href?.startsWith('legado-explore:')) return null;
+  try {
+    const raw = Buffer.from(href.slice('legado-explore:'.length), 'base64url').toString('utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed?.template) return null;
+    return { title: parsed.title || '分类', template: parsed.template, page: Number(parsed.page || 1) || 1 };
+  } catch {
+    return null;
+  }
+}
+
+function buildExploreTargetUrl(source: BookSource, target: ExploreTarget) {
+  return buildUrlFromTemplate(target.template, source, undefined, target.page);
+}
+
 export class LegadoClient {
   async getSources(): Promise<BookSource[]> {
     const config = await resolveLegadoConfig();
@@ -443,9 +575,9 @@ export class LegadoClient {
       ...source,
       capabilities: {
         searchSupported: !!source.legado?.searchUrl,
-        catalogSupported: false,
+        catalogSupported: hasExplore(source.legado || {}),
         searchMode: source.legado?.searchUrl ? 'legado' : 'disabled',
-        catalogMode: 'legado',
+        catalogMode: hasExplore(source.legado || {}) ? 'legado' : 'disabled',
         acquisitionTypes: ['application/x-legado-chapters+json'],
         lastCheckedAt: Date.now(),
       },
@@ -540,13 +672,80 @@ export class LegadoClient {
 
   async getCatalog(sourceId: string, href?: string): Promise<BookCatalogResult> {
     const source = await getSourceById(sourceId);
+    const rule = getRule(source);
+    if (!hasExplore(rule)) {
+      return { sourceId: source.id, sourceName: source.name, title: source.name, href: href || source.url, entries: [], navigation: [] };
+    }
+
+    const categories = parseExploreUrl(rule.exploreUrl);
+    const target = decodeExploreTarget(href) || null;
+    const navigation = categories.map((item) => ({
+      title: item.title,
+      href: encodeExploreTarget({ title: item.title, template: item.template, page: 1 }),
+      rel: 'legado:explore',
+      type: 'application/x-legado-explore',
+    }));
+
+    if (!target) {
+      return { sourceId: source.id, sourceName: source.name, title: source.name, subtitle: '请选择分类', href: href || source.url, entries: [], navigation };
+    }
+
+    const targetUrl = buildExploreTargetUrl(source, target);
+    const html = await fetchText(source, targetUrl);
+    const exploreRule = rule.ruleExplore || rule.ruleSearch;
+    const entries: BookListItem[] = [];
+    let pageCount = 0;
+    const json = parseJsonMaybe(html);
+    if (json && ruleIsJson(exploreRule?.bookList)) {
+      const items = selectJsonItems(json, exploreRule?.bookList);
+      pageCount = items.length;
+      items.forEach((item) => {
+        const detailHref = readJsonRule(item, exploreRule?.bookUrl, source, targetUrl);
+        const title = readJsonRule(item, exploreRule?.name, source, targetUrl);
+        if (!title && !detailHref) return;
+        const cover = readJsonRule(item, exploreRule?.coverUrl, source, targetUrl);
+        entries.push(makeItem(source, {
+          id: jsonPrimitiveToString(item?.id) || detailHref || undefined,
+          title,
+          author: readJsonRule(item, exploreRule?.author, source, targetUrl),
+          summary: readJsonRule(item, exploreRule?.intro, source, targetUrl),
+          cover: cover || undefined,
+          detailHref,
+          tags: readJsonRule(item, exploreRule?.kind, source, targetUrl).split(/[,，\s]+/).filter(Boolean),
+        }));
+      });
+    } else {
+      const $ = cheerio.load(html);
+      const items = selectElements($, $.root(), exploreRule?.bookList);
+      pageCount = items.length;
+      items.each((_, element) => {
+        const root = $(element);
+        const detailHref = readValue($, root, exploreRule?.bookUrl, targetUrl);
+        const title = readValue($, root, exploreRule?.name, targetUrl);
+        if (!title && !detailHref) return;
+        const cover = readValue($, root, exploreRule?.coverUrl, targetUrl);
+        entries.push(makeItem(source, {
+          id: detailHref || undefined,
+          title,
+          author: readValue($, root, exploreRule?.author, targetUrl),
+          summary: readValue($, root, exploreRule?.intro, targetUrl),
+          cover: cover || undefined,
+          detailHref,
+          tags: readValue($, root, exploreRule?.kind, targetUrl).split(/[,，\s]+/).filter(Boolean),
+        }));
+      });
+    }
+
     return {
       sourceId: source.id,
       sourceName: source.name,
-      title: source.name,
-      href: href || source.url,
-      entries: [],
-      navigation: [],
+      title: target.title || source.name,
+      subtitle: `第 ${target.page} 页`,
+      href: href || encodeExploreTarget(target),
+      entries,
+      navigation,
+      nextHref: pageCount > 0 ? encodeExploreTarget({ ...target, page: target.page + 1 }) : undefined,
+      previousHref: target.page > 1 ? encodeExploreTarget({ ...target, page: target.page - 1 }) : undefined,
     };
   }
 
@@ -704,9 +903,9 @@ export class LegadoClient {
   async detectCapabilitiesFromSource(source: BookSource): Promise<BookSourceCapabilities> {
     return {
       searchSupported: !!source.legado?.searchUrl,
-      catalogSupported: false,
+      catalogSupported: hasExplore(source.legado || {}),
       searchMode: source.legado?.searchUrl ? 'legado' : 'disabled',
-      catalogMode: 'legado',
+      catalogMode: hasExplore(source.legado || {}) ? 'legado' : 'disabled',
       acquisitionTypes: ['application/x-legado-chapters+json'],
       lastCheckedAt: Date.now(),
     };
